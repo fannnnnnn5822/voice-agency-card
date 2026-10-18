@@ -2200,8 +2200,8 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
       '【结果（代码算好的，照抄）】\n档：' + w.tier + '\n被听了 ' + w.sales + ' 次，每次 ' + moneyText(w.price) + '，入账 ' + moneyText(w.payout) + '\n' +
       (good.length ? '加分的地方：' + good.join('；') + '\n' : '') + (bad.length ? '拖后腿的地方：' + bad.join('；') + '\n' : '') +
       '市场运气：' + (w.roll >= 1 ? '好，赶上了平台推荐位' : w.roll <= -1 ? '差，同期撞上了别家的大作' : '一般') + '\n' +
-      '社长在正文里的宣发：' + (w.effortNote || '没看到') + '\n\n' +
-      '【请写】3 到 5 行，每行一句，S. 的口吻：第一句报档和数字，中间说为什么卖成这样，最后一句给老板一句实在的建议，顺嘴抱怨一下黎曼猜想也行。说原因时讲市场上发生的事：听众怎么评论、平台给没给推荐位、同期撞了谁家的新作、她哪句念得好；排练几遍、打分、运气值这些后台的账留在后台，S. 是在跟老板聊市场。数字只报被听次数和入账。只输出这几行。';
+      '老板有没有替它宣传：' + (w.effortNote || '没有') + '\n\n' +
+      '【请写】3 到 5 行，每行一句，S. 的口吻：第一句报档和数字，中间说为什么卖成这样，最后一句给老板一句实在的建议，顺嘴抱怨一下黎曼猜想也行。说原因时讲市场上发生的事：听众怎么评论、平台给没给推荐位、同期撞了谁家的新作、她哪句念得好；排练几遍、打分、运气值这些后台的账留在后台，S. 是在跟老板聊市场。「正文」「宣发分」这类词是后台的说法，报告里不出现。叫他老板，用大白话，像同事随口汇报，别用「您」和书面腔。数字只报被听次数和入账。只输出这几行。';
     return { sys: sys, user: user };
   }
   function parseReport(raw) {
@@ -4501,7 +4501,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     '  font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC","Source Han Sans SC","Hiragino Sans",system-ui,sans-serif;}',
     '#shacho-panel.night,#shacho-fab.night{--sh-paper:#141519;--sh-card:#1c1e23;--sh-ink:#ecebe6;--sh-sub:#b4b0a7;--sh-faint:#7f7b73;--sh-line:#2d3038;--sh-nav:#18191d;--sh-nav-on:#23262c;',
     '  --sh-accent:#e0634d;--sh-accent-ink:#ffffff;--sh-accent-soft:rgba(224,99,77,.14);--sh-photo-a:#262931;--sh-photo-b:#2e323b;--sh-shadow:0 18px 50px rgba(0,0,0,.6);--sh-input:#15171b;}',
-    '#shacho-panel *,#shacho-panel *::before,#shacho-panel *::after{box-sizing:border-box;}',
+    '#shacho-panel *,#shacho-panel *::before,#shacho-panel *::after{box-sizing:border-box;}#shacho-panel *::before,#shacho-panel *:not(.mk-cover)::after{content:none!important;}',
     '#shacho-panel button,#shacho-panel input,#shacho-panel textarea{font-family:inherit;}',
 
     /* 门牌 */
@@ -4711,7 +4711,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     /* 弹层：宽的、能滚的 */
     '#shacho-panel .sh-dialog{max-height:calc(100% - 8px);overflow-y:auto;overscroll-behavior:contain;}',
     '#shacho-panel .sh-dialog.wide{width:min(600px,100%);}',
-    '#shacho-panel .sh-dialog h3 small{font-size:12.5px;font-weight:600;color:var(--sh-faint);margin-left:10px;}',
+    '#shacho-panel .sh-dialog h3 small{display:block;font-size:12.5px;font-weight:600;color:var(--sh-faint);margin:4px 0 0;}',
     '#shacho-panel .sh-dialog .sh-label{margin-bottom:6px;}',
     '#shacho-panel .sh-fee{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:-4px 0 14px;padding:10px 12px;border-radius:10px;background:var(--sh-accent-soft);font-size:13px;color:var(--sh-sub);}',
     '#shacho-panel .sh-fee b{font-size:18px;color:var(--sh-ink);}',
@@ -5140,7 +5140,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
         '<button class="sh-btn" data-act="rh-take"' + (R.busy ? ' disabled' : '') + '>从头念一遍</button>'
         : '<button class="sh-btn pri big" data-act="rh-take"' + (R.busy ? ' disabled' : '') + '>' + (R.busy ? '她在念……' : '听她念') + '</button>') +
       '<button class="sh-btn" data-act="rh-chat">去正文排</button></div>' +
-      '<div class="sh-hint">每一遍 = 一次 AI 生成 + 一段 Fish 语音。「去正文排」把这场带进正文，当面排。</div></div>';
+      '<div class="sh-hint">「去正文排」把这场带进正文，当面排。</div></div>';
     var right = '<div class="sh-dayh">她念过的<small>' + (takes.length ? '共 ' + takes.length + ' 遍，最多留 ' + RH_CAP + ' 遍' : '还没有') + '</small></div>';
     if (!takes.length) right += '<div class="sh-empty">挑好剧本，点「听她念」。每一遍都会留在这里，能来回比着听。</div>';
     else {
@@ -5484,7 +5484,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
       '<div class="sh-pane" data-pane="fish">' +
         '<div class="sh-fld"><div class="sh-label">Fish API Key</div><input id="sh-key-input" type="password" autocomplete="off" placeholder="' + (lsGet(OWN_KEY) ? '已保存（留空不改）' : '贴 Fish API Key') + '"></div>' +
         '<div class="sh-fld"><div class="sh-label">模型</div><select id="sh-fish-model">' + opts(FISH_MODELS, fishModel({ model: set.fishModel || (fc && fc.model) })) + '</select></div>' +
-        '<div class="sh-hint">去 fish.audio 官网，左上角「开发者 / Developer」里新建一个 API Key，复制过来填上；模型选 s2.1-pro-free（免费到 11 月底）。</div>' +
+        '<div class="sh-hint">去 <a href="https://fish.audio/" target="_blank" rel="noopener">fish.audio 官网</a>，左上角「开发者 / Developer」里新建一个 API Key，复制过来填上；模型选 s2.1-pro-free（免费到 11 月底）。</div>' +
         '<div class="sh-hint">' + esc(src(fc, 'Fish')) + '</div></div>' +
       '<div class="sh-pane" data-pane="minimax">' +
         '<div class="sh-fld"><div class="sh-label">MiniMax 接口密钥</div><input id="sh-mm-key" type="password" autocomplete="off" placeholder="' + (lsGet(MM_KEY) ? '已保存（留空不改）' : '贴 MiniMax 接口密钥') + '"></div>' +
@@ -5710,7 +5710,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
         '<button class="sh-btn" data-act="sg-again">再写一份</button><button class="sh-btn pri" data-act="sg-use">用这份</button></div></div></div>';
       return h;
     }
-    h += '<p>代码先随机抽一堆格子，故意不配套；不顺眼就「再抽一次」，满意了点「就写这个」，AI 把每一格都写进去。一次 AI 生成，写好的存进「我写的」。</p>';
+    h += '<p>先随机抽一堆格子，故意不配套；不顺眼就「再抽一次」，满意了点「就写这个」，每一格都会写进剧本。写好的存进「我写的」。</p>';
     h += '<div class="sh-label">档位（' + esc(nm) + '的尺度到 ' + esc(p.tier) + '）</div><div class="sh-chips">' +
       '<button class="sh-chip sm' + (!m.want ? ' on' : '') + '" data-act="sg-tier" data-id=""' + (busy ? ' disabled' : '') + '>随机</button>' +
       tiersUpTo(p.tier).map(function (t) { return '<button class="sh-chip sm' + (m.want === t ? ' on' : '') + '" data-act="sg-tier" data-id="' + esc(t) + '"' + (busy ? ' disabled' : '') + '>' + esc(t) + '</button>'; }).join('') + '</div>';
@@ -5789,7 +5789,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     h += '<div class="sh-chips sh-scq">' + S_QUICK.map(function (q, i) { return '<button class="sh-chip sm" data-act="sc-quick" data-i="' + i + '"' + (S.busy ? ' disabled' : '') + '>' + esc(q) + '</button>'; }).join('') + '</div>';
     h += '<div class="sh-scin"><textarea id="sh-sc-input" data-sc-input maxlength="300" rows="2" placeholder="跟 S. 说……（Enter 发送，Shift+Enter 换行）">' + esc(S.draft) + '</textarea>' +
       '<button class="sh-btn pri" data-act="sc-send"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? '…' : '发送') + '</button></div>';
-    h += '<div class="sh-scfoot"><span class="sh-hint">她能替你推掉邀约、在日历上记一笔、把人叫进排练室，你开口她才办。每句话 = 一次 AI 生成。</span>' +
+    h += '<div class="sh-scfoot"><span class="sh-hint">她能替你推掉邀约、在日历上记一笔、把人叫进排练室，你开口她才办。</span>' +
       (msgs.length ? '<button class="sh-link" data-act="sc-clear"' + (S.busy ? ' disabled' : '') + '>清空记录</button>' : '') + '</div>';
     return h;
   }
