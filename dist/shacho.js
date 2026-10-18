@@ -1524,7 +1524,9 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
       '<div class="mk-by">' + linkAgency(w) + ' · CV ' + linkTalent(w) + '</div>' +
       '<div class="mk-tags">' + tierTag(w.tier) + (w.tags || []).slice(0, 3).map(function (t) { return '<button class="mk-tag" data-act="mk-tagq" data-v="' + esc(t) + '">' + esc(t) + '</button>'; }).join('') + '</div>' +
       '<div class="mk-nums"><b>' + esc(money(w.price)) + '</b><span>/次</span><span class="sep">·</span><span>' + (w.period_sales != null ? esc(w.period_sales) + ' 次（总 ' + esc(w.sales) + '）' : '听了 ' + esc(w.sales || 0) + ' 次') + '</span></div>' +
-      '<div class="mk-st">' + starsHtml(w.stars, w.stars_n) + '</div>' +
+      '<div class="mk-st">' + starsHtml(w.stars, w.stars_n) +
+      // 10-18 Fan 实测：在格子里付费听完，到处找不到打星的地方（只在作品页里）→ 听过的格子直接给个入口
+      (hasBought(ctx().readState(), w.id) ? '<button class="mk-a mk-gorate" data-act="mk-work" data-id="' + esc(w.id) + '" data-rate="1">去打星</button>' : '') + '</div>' +
       '<div class="mk-acts">' + playBtns(w) + '</div></div></div>';
   }
   function grid(rows, ranked) { return rows && rows.length ? '<div class="mk-grid">' + rows.map(function (w, i) { return card(w, ranked ? i + 1 : 0); }).join('') + '</div>' : ''; }
@@ -1584,6 +1586,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
       var n = Number(dist[s]) || 0, pc = tot ? Math.round(n / tot * 100) : 0; return '<div><span>' + s + '★</span><i><b style="width:' + pc + '%"></b></i><em>' + n + '</em></div>'; }).join('') + '</div>';
     if (hasBought(st, id)) {
       var rt = M.ui.rate[id] || {};
+      if (M.ui.toRate === id) { M.ui.toRate = 0; setTimeout(function () { var el = q('#mk-cm-' + id), box = el && el.closest('.mk-rate'); if (box && box.scrollIntoView) box.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 60); }
       h += '<div class="mk-rate"><div class="mk-rstars">' + [1, 2, 3, 4, 5].map(function (s) { return '<button class="mk-s' + (s <= (rt.stars || 0) ? ' on' : '') + '" data-act="mk-star" data-id="' + id + '" data-v="' + s + '" aria-label="' + s + ' 星">★</button>'; }).join('') + '</div>' +
         '<input class="mk-cm" id="mk-cm-' + id + '" maxlength="' + MK.commentMax + '" placeholder="一句评价（可不写，' + MK.commentMax + ' 字以内）" value="' + esc(rt.comment || '') + '">' +
         '<button class="sh-btn sm pri" data-act="mk-rate" data-id="' + id + '"' + (rt.busy ? ' disabled' : '') + '>' + (rt.done ? '改评价' : '交评价') + '</button>' + (rt.err ? '<div class="mk-errt">' + esc(rt.err) + '</div>' : '') + (rt.done ? '<div class="mk-ok">交上了。</div>' : '') + '</div>';
@@ -1662,7 +1665,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
         return '<tr class="' + (r.me ? 'me' : '') + '"><td class="c-rk"><b>' + r.rank + '</b></td><td class="c-nm">' + nm + '<span class="sub">' + (r.npc ? '老牌 · ' : '') + esc(r.talents) + ' 人 · ' + esc(r.hit) + (r.fined ? ' · <i class="mk-fine">罚款 ' + esc(moneyS(r.fined)) + '</i>' : '') + '</span></td>' +
           '<td class="c-num">' + esc(moneyS(r.cap)) + '</td><td class="c-num">' + esc(moneyS(r.revenue)) + '</td><td class="c-tal">' + esc(r.talents) + '</td><td class="c-hit">' + esc(r.hit) + '</td></tr>';
       }).join('') + '</tbody></table>' +
-      '<div class="sh-hint">市值 = 真人收入合计 + 近 30 天收入 × 6 − 罚款，全由服务器算。' + (me ? '' : '你的事务所第一部作品被真人付费听过以后就会上榜。') + '老牌 = NPC 事务所。</div>';
+      '<div class="sh-hint">市值 = 真人收入合计 + 近 30 天收入 × 6 − 罚款，全由服务器算。' + '开了张的事务所都在榜上，还没上架作品的排在后面。' + '老牌 = NPC 事务所。</div>';
   }
   // 企划页每部作品下面那个按钮
   function uploadButton(w, st) {
@@ -1721,7 +1724,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
       case 'mk-rankkind': u.rank = v; break;
       case 'mk-period': u.period = v; break;
       case 'mk-rtier': u.tier = v; break;
-      case 'mk-work': if (el.getAttribute('data-close')) { u.modal = null; M.ui.up = null; trimStop(); } go('work'); M.data.work = null; loadWork(id); break;
+      case 'mk-work': if (el.getAttribute('data-close')) { u.modal = null; M.ui.up = null; trimStop(); } u.toRate = el.getAttribute('data-rate') ? Number(id) : 0; go('work'); M.data.work = null; loadWork(id); break;
       case 'mk-agency': go('agency'); M.data.agency = null; loadAgency(id); break;
       case 'mk-talent': go('talent'); M.data.talent = null; loadTalent(id); break;
       case 'mk-preview': var pw = findWork(id); if (pw) { if (M.player.id === Number(id) && M.player.mode === 'preview') stopPlay(); else play(pw, 'preview'); } break;
@@ -1804,6 +1807,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     '#shacho-panel .mk-t:hover{color:var(--sh-accent);}',
     '#shacho-panel .mk-a{padding:0;border:0;background:none;color:#2b6cb0;cursor:pointer;font:inherit;text-align:left;}',
     '#shacho-panel.night .mk-a{color:#6aa6ea;}',
+    '#shacho-panel .mk-gorate{margin-left:8px;font-size:13px;font-weight:700;}',
     '#shacho-panel .mk-a:hover{text-decoration:underline;}',
     '#shacho-panel .mk-by{font-size:12.5px;color:var(--sh-sub);}',
     '#shacho-panel .mk-tags{display:flex;flex-wrap:wrap;gap:4px;align-items:center;}',
