@@ -725,7 +725,10 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     maxSec: 180,                   // 一部最长 3 分钟，超出的截掉（最后半秒淡出）
     kbps: 48,                      // mp3 单声道 48kbps：1 秒约 6 KB，三分钟约 1.08 MB
     maxBytes: 1572864,             // 1.5 MB，桶的上限
-    previewSec: 10,                // 免费试听前 10 秒
+    previewSec: 10,                // 免费试听 10 秒（从卖家挑的 preview_at 开始；老作品 = 0 = 开头）
+    trimMin: 5,                    // 上架前裁剪：选段最短 5 秒（作品本身不到 5 秒就整部）
+    fadeIn: 0.3, fadeOut: 0.5,     // 裁剪的切口：开头不是 0 就淡入 0.3 秒，结尾不是作品末尾就淡出 0.5 秒
+    peaks: 120,                    // 裁剪框里那条波形画几根
     commentMax: 40,
     timeoutMs: 15000,
     offlineCooldown: 60000,        // 连不上以后，60 秒内不再自动去连（手动「再试一次」不受限）
@@ -849,27 +852,230 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
   }
 
   // ═════════════════════════ mp3：浏览器里压（lamejs 1.2.1，cdnjs）═════════════════════════
-  // 输入：AudioBuffer（或 { samples: Float32Array, rate }）。单声道，超过 maxSec 截掉、最后半秒淡出
+  // 输入：AudioBuffer（或 { samples: Float32Array, rate }）。单声道
   function pcmOf(buf) {
     if (!buf) throw new Error('没有声音');
     if (buf.buf) buf = buf.buf;   // shacho.js 的 renderWorkAudio 返回 { buf, dur }
     if (buf.samples) return { samples: buf.samples, rate: buf.rate };
     return { samples: buf.getChannelData(0), rate: buf.sampleRate };
   }
+  function durOf(input) { var p = pcmOf(input); return Math.floor(p.samples.length / p.rate * 10) / 10; }   // 往下取到 0.1 秒，裁剪的格子都在 0.1 上
+  // opt.start / opt.end = 只压这一段（秒；上架前裁剪选的）。不给 = 整部。
+  // 超过 maxSec 的截掉；切口：开头不是 0 → 淡入 fadeIn 秒，结尾不是作品末尾（自己选的 / 被 3 分钟截的）→ 淡出 fadeOut 秒
   function encodeMp3(lame, input, opt) {
     opt = opt || {};
     var p = pcmOf(input), rate = p.rate, kbps = opt.kbps || MK.kbps, maxSec = opt.maxSec || MK.maxSec;
-    var src = p.samples, max = Math.floor(maxSec * rate), truncated = src.length > max;
-    var n = truncated ? max : src.length, pcm = new Int16Array(n), fade = truncated ? Math.floor(rate * 0.5) : 0;
+    var src = p.samples, max = Math.floor(maxSec * rate);
+    var s0 = Math.max(0, Math.min(src.length, Math.floor((Number(opt.start) || 0) * rate)));
+    var e0 = opt.end != null && isFinite(Number(opt.end)) ? Math.max(s0, Math.min(src.length, Math.floor(Number(opt.end) * rate))) : src.length;
+    var truncated = e0 - s0 > max; if (truncated) e0 = s0 + max;
+    var n = e0 - s0, pcm = new Int16Array(n);
+    var fi = s0 > 0 ? Math.min(n, Math.floor(rate * MK.fadeIn)) : 0, fo = e0 < src.length ? Math.min(n, Math.floor(rate * MK.fadeOut)) : 0;
     for (var i = 0; i < n; i++) {
-      var x = Math.max(-1, Math.min(1, src[i]));
-      if (fade && i > n - fade) x *= (n - i) / fade;
+      var x = Math.max(-1, Math.min(1, src[s0 + i]));
+      if (fi && i < fi) x *= i / fi;
+      if (fo && i > n - fo) x *= (n - i) / fo;
       pcm[i] = x < 0 ? x * 0x8000 : x * 0x7fff;
     }
     var enc = new lame.Mp3Encoder(1, rate, kbps), chunks = [], bytes = 0, B = 1152;
     for (var k = 0; k < n; k += B) { var o = enc.encodeBuffer(pcm.subarray(k, k + B)); if (o.length) { chunks.push(o); bytes += o.length; } }
     var end = enc.flush(); if (end.length) { chunks.push(end); bytes += end.length; }
-    return { chunks: chunks, bytes: bytes, sec: Math.round(n / rate * 10) / 10, truncated: truncated, rate: rate, kbps: kbps };
+    return { chunks: chunks, bytes: bytes, sec: Math.round(n / rate * 10) / 10, truncated: truncated, rate: rate, kbps: kbps,
+      samples: n, start: s0 / rate, end: e0 / rate, fadeIn: fi, fadeOut: fo };
+  }
+
+  // ═════════════════════════ 上架前裁剪（10-18 Fan 批）═════════════════════════
+  // 选段 = [start, end]（秒，0.1 一格），免费试听从 preview 开始放 10 秒。规矩：
+  //   · 长度 ≥ trimMin（5 秒；作品本身不到 5 秒就整部）、≤ maxSec（3 分钟；拉超了 → 结束点被按住，clamped = true，弹层里说一句）
+  //   · preview 只能在选段里：start ≤ preview ≤ max(start, end − 10)（尽量让 10 秒放满）；没挑过 = start
+  //   · which = 刚拖的是哪个（'start' / 'end' / 'preview'）：拖开始点挤到结束点 → 结束点往后让；拖结束点挤到开始点 → 开始点往前让
+  function r1(x) { return Math.round(x * 10) / 10; }
+  function normTrim(t, dur, which) {
+    t = t || {};
+    dur = Math.max(0, Math.floor((Number(dur) || 0) * 10 + 1e-6) / 10);
+    var minL = Math.min(MK.trimMin, dur), maxL = MK.maxSec, clamped = false, short = false;
+    var s = r1(Number(t.start)), e = r1(Number(t.end)), pv = r1(Number(t.preview));
+    if (!isFinite(s)) s = 0;
+    if (!isFinite(e)) { e = Math.min(dur, s + maxL); if (dur - s > maxL + 1e-6) clamped = true; }   // 默认整部；超过 3 分钟 = 前 3 分钟，也要说一句
+    s = Math.max(0, Math.min(s, dur - minL));
+    e = Math.max(0, Math.min(e, dur));
+    if (e - s < minL - 1e-6) {
+      short = true;
+      if (which === 'end') { e = Math.max(e, minL); s = Math.max(0, e - minL); }
+      else e = Math.min(dur, s + minL);
+    }
+    if (e - s > maxL + 1e-6) { e = s + maxL; clamped = true; }
+    s = r1(s); e = r1(e);
+    if (t.clamped && !which && s === r1(Number(t.start)) && e === r1(Number(t.end))) clamped = true;   // 重画时再过一遍，那句提示别丢
+    var pvMax = r1(Math.max(s, e - MK.previewSec));
+    if (!isFinite(pv)) pv = s;
+    pv = r1(Math.max(s, Math.min(pv, pvMax)));
+    return { start: s, end: e, preview: pv, pvMax: pvMax, len: r1(e - s), dur: dur, clamped: clamped, short: short };
+  }
+  function mmss(sec) { sec = Math.max(0, Math.round(Number(sec) || 0)); return Math.floor(sec / 60) + ':' + ('0' + (sec % 60)).slice(-2); }
+  // 波形：分 n 段取每段最大振幅，归一到 0–1（最响那根 = 1）
+  function peaksOf(input, n) {
+    var p = pcmOf(input), d = p.samples, len = d.length; n = Math.max(1, n || MK.peaks);
+    var out = [], step = Math.max(1, Math.ceil(len / n)), top = 0;
+    for (var i = 0; i < n; i++) {
+      var a = i * step, b = Math.min(len, a + step), m = 0;
+      for (var j = a; j < b; j += 4) { var v = d[j] < 0 ? -d[j] : d[j]; if (v > m) m = v; }   // 隔 4 个样本取一个，三分钟的也不卡
+      out.push(m); if (m > top) top = m;
+    }
+    top = Math.max(top, 0.05);
+    return out.map(function (m) { return Math.round(m / top * 100) / 100; });
+  }
+  // 混好的整部（弹层一打开就混；上架直接拿来压，不混第二遍）。sig = 台词变了就作废
+  function workSig(w) { try { return JSON.stringify([w.lines || [], w.fishId || '']); } catch (e) { return String(Date.now()); } }
+  function mixReady(w) { var mx = M.mix; return !!(mx && w && mx.id === w.id && mx.sig === workSig(w) && mx.audio); }
+  function prepMix(id) {
+    var c = ctx(), st = c.readState ? c.readState() : {}, w = (st.works || []).find(function (x) { return x.id === id; });
+    if (!w) return Promise.resolve(null);
+    var sig = workSig(w), old = M.mix;
+    if (old && old.id === id && old.sig === sig) { if (old.p) return old.p; if (old.audio) return Promise.resolve(old); }
+    trimStop();
+    var mx = M.mix = { id: id, sig: sig, busy: true, err: '', prog: '', audio: null, dur: 0, peaks: null, p: null };
+    mx.p = (async function () {
+      try {
+        if (!c.renderAudio) throw new Error('这个版本还不能混音');
+        var audio = await c.renderAudio(w, function (i, n) { mx.prog = i + '/' + n; if (M.mix === mx) rerender(); });
+        mx.audio = audio; mx.dur = durOf(audio); mx.peaks = peaksOf(audio, MK.peaks);
+        var m = M.ui.modal;
+        if (m && m.kind === 'upload' && m.id === id) m.trim = normTrim(m.trim || {}, mx.dur);
+        return mx;
+      } catch (e) { mx.err = (e && e.message) || String(e); throw e; }
+      finally { mx.busy = false; mx.p = null; if (M.mix === mx) rerender(); }
+    })();
+    rerender();
+    return mx.p;
+  }
+  // 试听选段 / 听免费试听那 10 秒：Web Audio 放混好的那份（父页面的 AudioContext），切口的淡入淡出和压出来的一样
+  function audioCtx() {
+    if (M.actx) return M.actx;
+    var c = ctx(), W = (c.doc && c.doc.defaultView) || G;
+    var AC = c.AudioContext || W.AudioContext || W.webkitAudioContext || G.AudioContext;
+    if (!AC) return null;
+    try { M.actx = new AC(); } catch (e) { return null; }
+    return M.actx;
+  }
+  function playableBuf(ac, audio) {
+    var b = audio && audio.buf ? audio.buf : audio;
+    if (b && typeof b.duration === 'number' && typeof b.getChannelData === 'function' && b.numberOfChannels) return b;
+    var p = pcmOf(audio), ab = ac.createBuffer(1, p.samples.length, p.rate);
+    if (ab.copyToChannel) ab.copyToChannel(p.samples, 0); else ab.getChannelData(0).set(p.samples);
+    return ab;
+  }
+  function trimStop() {
+    var tp = M.tplay; M.tplay = null;
+    if (tp) { if (tp.timer) clearTimeout(tp.timer); try { tp.src.onended = null; tp.src.stop(); } catch (e) {} try { tp.g.disconnect(); } catch (e) {} }
+    syncPlayBtns();
+  }
+  function trimPlay(mode) {
+    var was = M.tplay && M.tplay.mode;
+    trimStop();
+    if (was === mode) return null;   // 再点一次 = 停
+    var mx = M.mix, m = M.ui.modal;
+    if (!mx || !mx.audio || !m || m.kind !== 'upload' || m.id !== mx.id) return null;
+    var tr = m.trim = normTrim(m.trim || {}, mx.dur);
+    stopPlay(); var c = ctx(); if (c.stopAudio) { try { c.stopAudio(); } catch (e) {} }
+    var ac = audioCtx(); if (!ac) { toast('warning', '这个浏览器放不了声音'); return null; }
+    try { if (ac.state === 'suspended' && ac.resume) ac.resume(); } catch (e) {}
+    var a = mode === 'pv' ? tr.preview : tr.start, b = mode === 'pv' ? Math.min(tr.end, tr.preview + MK.previewSec) : tr.end, len = Math.max(0.05, b - a);
+    var src = ac.createBufferSource(), g = ac.createGain();
+    src.buffer = playableBuf(ac, mx.audio); src.connect(g); g.connect(ac.destination);
+    var t0 = (ac.currentTime || 0) + 0.02, fi = Math.min(MK.fadeIn, len / 2), fo = Math.min(MK.fadeOut, len / 2);
+    try {
+      if (a > 0) { g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(1, t0 + fi); }
+      if (b < mx.dur - 0.05) { g.gain.setValueAtTime(1, t0 + len - fo); g.gain.linearRampToValueAtTime(0, t0 + len); }
+    } catch (e) {}
+    src.start(t0, a, len);
+    var tp = M.tplay = { mode: mode, src: src, g: g, from: a, to: b, timer: null };
+    src.onended = function () { if (M.tplay === tp) { M.tplay = null; syncPlayBtns(); } };
+    tp.timer = setTimeout(function () { if (M.tplay === tp) trimStop(); }, (len + 0.6) * 1000);
+    syncPlayBtns();
+    return tp;
+  }
+  function trimBtnTxt(mode) { var on = M.tplay && M.tplay.mode === mode; return mode === 'pv' ? (on ? '■ 停' : '▶ 听 ' + MK.previewSec + ' 秒试听') : (on ? '■ 停' : '▶ 试听选段'); }
+  function panelEl() { try { return ctx().panel ? ctx().panel() : null; } catch (e) { return null; } }
+  // 放 / 停只改按钮上的字，不重画弹层（拖滑块的时候重画会把手指底下的滑块换掉）
+  function syncPlayBtns() {
+    var P = panelEl(); if (!P || !P.querySelectorAll) return;
+    try { [].forEach.call(P.querySelectorAll('[data-act="mk-tr-play"],[data-act="mk-tr-pv"]'), function (b) { b.textContent = trimBtnTxt(b.getAttribute('data-act') === 'mk-tr-pv' ? 'pv' : 'sel'); }); } catch (e) {}
+  }
+  function trimText(tr) { return mmss(tr.start) + ' – ' + mmss(tr.end) + '，长度 ' + mmss(tr.len); }
+  function trimHint(tr) {
+    if (tr.clamped) return '一部最长 3 分钟：结束点只能拉到开始后 3 分钟，再往后要先把开始点往后挪。';
+    if (tr.short && tr.dur > MK.trimMin) return '最短 ' + MK.trimMin + ' 秒。';
+    return '';
+  }
+  function pvText(tr) { return '市场上「试听 ' + MK.previewSec + ' 秒」放 ' + mmss(tr.preview) + ' – ' + mmss(Math.min(tr.end, tr.preview + MK.previewSec)) + '。'; }
+  // 波形上的遮罩：选段外压暗，试听那 10 秒高亮
+  function waveGeo(tr) {
+    var N = MK.peaks, d = tr.dur || 1, x = function (t) { return Math.max(0, Math.min(N, t / d * N)); };
+    return { l: x(tr.start), r: x(tr.end), p: x(tr.preview), pw: Math.max(0, x(Math.min(tr.end, tr.preview + MK.previewSec)) - x(tr.preview)) };
+  }
+  function trimHtml(m, running) {
+    var mx = M.mix;
+    if (!mx || mx.id !== m.id || (!mx.audio && !mx.busy)) {
+      return '<div class="mk-trim"><div class="mk-tr-wait">' + (mx && mx.err ? '<span class="mk-errt">没混出来：' + esc(mx.err) + '</span>' : '先把整部混出来，才能挑上架哪一段。') +
+        '<button class="sh-btn sm" data-act="mk-tr-mix"' + (running ? ' disabled' : '') + '>' + (mx && mx.err ? '再混一次' : '混音') + '</button></div></div>';
+    }
+    if (mx.busy) return '<div class="mk-trim"><div class="mk-tr-wait">混音中' + (mx.prog ? '（合成 ' + esc(mx.prog) + '）' : '') + '……混好了在这儿挑上架的那一段。</div></div>';
+    var tr = m.trim = normTrim(m.trim || {}, mx.dur), N = MK.peaks, gm = waveGeo(tr), dis = running ? ' disabled' : '';
+    var bars = mx.peaks.map(function (v, i) { var h = Math.max(0.8, v * 36); return '<rect x="' + (i + 0.15) + '" y="' + (20 - h / 2).toFixed(2) + '" width="0.7" height="' + h.toFixed(2) + '"/>'; }).join('');
+    var rng = function (k, lab, min, max, val, vid) {
+      return '<label class="mk-tr-row"><span>' + lab + '</span><input type="range" id="mk-tr-' + k + '" data-tr="' + k + '" min="' + min + '" max="' + max + '" step="0.1" value="' + val + '"' + (min >= max ? ' disabled' : dis) + '><b id="' + vid + '">' + mmss(val) + '</b></label>';
+    };
+    return '<div class="mk-trim"><div class="sh-label">上架哪一段（整部 ' + esc(mmss(tr.dur)) + '）</div>' +
+      '<svg class="mk-wave" viewBox="0 0 ' + N + ' 40" preserveAspectRatio="none" aria-hidden="true"><g class="bars">' + bars + '</g>' +
+      '<rect class="pv" id="mk-tr-gp" x="' + gm.p.toFixed(2) + '" y="0" width="' + gm.pw.toFixed(2) + '" height="40"/>' +
+      '<rect class="dim" id="mk-tr-gl" x="0" y="0" width="' + gm.l.toFixed(2) + '" height="40"/><rect class="dim" id="mk-tr-gr" x="' + gm.r.toFixed(2) + '" y="0" width="' + (N - gm.r).toFixed(2) + '" height="40"/></svg>' +
+      rng('start', '开始', 0, tr.dur, tr.start, 'mk-tr-sv') + rng('end', '结束', 0, tr.dur, tr.end, 'mk-tr-ev') +
+      '<div class="mk-tr-txt" id="mk-tr-txt">' + esc(trimText(tr)) + '</div><div class="mk-tr-hint" id="mk-tr-hint">' + esc(trimHint(tr)) + '</div>' +
+      rng('preview', '试听从', tr.start, tr.pvMax, tr.preview, 'mk-tr-pvv') +
+      '<div class="mk-tr-note" id="mk-tr-note">' + esc(pvText(tr)) + '</div>' +
+      '<div class="mk-acts"><button class="sh-btn sm" data-act="mk-tr-play"' + dis + '>' + trimBtnTxt('sel') + '</button><button class="sh-btn sm ghost" data-act="mk-tr-pv"' + dis + '>' + trimBtnTxt('pv') + '</button></div></div>';
+  }
+  // 拖滑块：不重画，只改数字、遮罩、另外两个滑块
+  function syncTrimDom(P, tr) {
+    if (!P || !P.querySelector) return;
+    function $(id) { return P.querySelector('#' + id); }
+    var gm = waveGeo(tr), el;
+    if ((el = $('mk-tr-start'))) el.value = tr.start;
+    if ((el = $('mk-tr-end'))) el.value = tr.end;
+    if ((el = $('mk-tr-preview'))) { el.min = tr.start; el.max = tr.pvMax; el.value = tr.preview; el.disabled = tr.start >= tr.pvMax; }
+    if ((el = $('mk-tr-sv'))) el.textContent = mmss(tr.start);
+    if ((el = $('mk-tr-ev'))) el.textContent = mmss(tr.end);
+    if ((el = $('mk-tr-pvv'))) el.textContent = mmss(tr.preview);
+    if ((el = $('mk-tr-txt'))) el.textContent = trimText(tr);
+    if ((el = $('mk-tr-hint'))) el.textContent = trimHint(tr);
+    if ((el = $('mk-tr-note'))) el.textContent = pvText(tr);
+    if ((el = $('mk-tr-gl'))) el.setAttribute('width', gm.l.toFixed(2));
+    if ((el = $('mk-tr-gr'))) { el.setAttribute('x', gm.r.toFixed(2)); el.setAttribute('width', (MK.peaks - gm.r).toFixed(2)); }
+    if ((el = $('mk-tr-gp'))) { el.setAttribute('x', gm.p.toFixed(2)); el.setAttribute('width', gm.pw.toFixed(2)); }
+  }
+  // 面板上的 input 事件（init 里挂）：弹层里打的字先记下（混音进度会重画弹层，别把字冲掉）；滑块 → 裁剪
+  function onInput(e) {
+    var t = e && e.target, m = M.ui.modal;
+    if (!t || !t.getAttribute || !m || m.kind !== 'upload') return;
+    var id = t.id;
+    if (id === 'mk-up-title') m.title = t.value;
+    else if (id === 'mk-up-blurb') m.blurb = t.value;
+    else if (id === 'mk-up-price') m.price = t.value;
+    else if (id === 'mk-up-ok') m.confirmed = !!t.checked;
+    var k = t.getAttribute('data-tr');
+    if (!k || !M.mix || !M.mix.audio || M.mix.id !== m.id) return;
+    trimInput(k, t.value);
+    syncTrimDom(panelEl() || (t.closest && t.closest('.sh-dialog')), m.trim);
+  }
+  function trimInput(k, v) {   // 纯状态那半（测试直接调）
+    var m = M.ui.modal; if (!m || !M.mix) return null;
+    var cur = Object.assign({}, m.trim || {}); cur[k] = Number(v);
+    if (k === 'preview') m.pvTouched = true;
+    else if (!m.pvTouched) delete cur.preview;   // 没挑过试听起点 = 跟着开始点走
+    if (M.tplay) trimStop();
+    m.trim = normTrim(cur, M.mix.dur, k);
+    return m.trim;
   }
   var _lame = null;
   function loadLame() {
@@ -1096,11 +1302,19 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
       step('agency');
       var aid = await ensureAgency();
       step('mix');
-      if (!c.renderAudio) throw new Error('这个版本还不能混音');
-      var audio = await c.renderAudio(w, function (i, n) { up.stage = 'mix'; up.prog = i + '/' + n; rerender(); });
+      trimStop();
+      var audio;
+      if (M.mix && M.mix.id === localId && M.mix.p && M.mix.sig === workSig(w)) { try { await M.mix.p; } catch (e0) {} }   // 弹层里正在混 → 等它
+      if (mixReady(w)) audio = M.mix.audio;   // 弹层里混好的那份，不混第二遍
+      else {
+        if (!c.renderAudio) throw new Error('这个版本还不能混音');
+        audio = await c.renderAudio(w, function (i, n) { up.stage = 'mix'; up.prog = i + '/' + n; rerender(); });
+      }
+      var tr = normTrim(form.trim || {}, durOf(audio));   // 没裁过 = 整部（超过 3 分钟 = 前 3 分钟）
       step('mp3');
       var lame = await loadLame();
-      var mp3 = encodeMp3(lame, audio);
+      var mp3 = encodeMp3(lame, audio, { start: tr.start, end: tr.end });
+      var pvAt = r1(Math.max(0, Math.min(tr.preview - tr.start, mp3.sec - 1)));   // 试听起点：存成「上传那个文件里的第几秒」
       if (mp3.bytes > MK.maxBytes) return fail('压完还有 ' + Math.round(mp3.bytes / 1024) + ' KB，超过 1.5 MB 上限了。');
       var g = identity();
       step('ticket');
@@ -1111,17 +1325,19 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
       await M.api.upload(tk.path, new Bl(mp3.chunks, { type: 'audio/mpeg' }));
       step('publish');
       var pub = await M.api.rpc('va_publish', { p_token: g.token, p_agency_id: aid, p_path: tk.path, p_local_id: row.local_id, p_title: row.title, p_blurb: row.blurb,
-        p_tags: row.tags, p_tier: row.tier, p_stage_name: row.stage_name, p_stage_key: row.stage_key, p_price: row.price, p_duration: mp3.sec });
+        p_tags: row.tags, p_tier: row.tier, p_stage_name: row.stage_name, p_stage_key: row.stage_key, p_price: row.price, p_duration: mp3.sec, p_preview_at: pvAt });
       if (!pub || !pub.ok) return fail(reasonText(pub, { '艺名': row.stage_name, '别家': (pub && pub.owner) || '别家' }));
       await c.save(function (s) {
         var o = normOnline(s); o.listed[localId] = pub.id; o.stats[localId] = { sales: 0, stars: 0, n: 0, hidden: false };
         if (C().addNews) C().addNews(s, '《' + row.title + '》上架联机市场，每次 ' + money(row.price));
       });
-      up.stage = 'done'; up.done = true; up.serverId = pub.id; up.truncated = mp3.truncated; up.sec = mp3.sec; up.kb = Math.round(mp3.bytes / 1024);
+      var cutTxt = (tr.start > 0 || tr.end < tr.dur) ? mmss(tr.start) + '–' + mmss(tr.end) : '';
+      up.stage = 'done'; up.done = true; up.serverId = pub.id; up.truncated = mp3.truncated || tr.clamped; up.sec = mp3.sec; up.kb = Math.round(mp3.bytes / 1024); up.cut = cutTxt; up.pv = pvAt;
+      M.mix = null;
       M.data.list = null;   // 新作榜重拉
       rerender();
-      toast('success', '《' + row.title + '》上架了' + (mp3.truncated ? '（超过 3 分钟，截到了 3 分钟）' : '') + '。');
-      return { ok: true, id: pub.id, row: row, mp3: { bytes: mp3.bytes, sec: mp3.sec, truncated: mp3.truncated } };
+      toast('success', '《' + row.title + '》上架了' + (cutTxt ? '（' + cutTxt + ' 这段）' : '') + '。');
+      return { ok: true, id: pub.id, row: row, previewAt: pvAt, trim: tr, mp3: { bytes: mp3.bytes, sec: mp3.sec, truncated: mp3.truncated, samples: mp3.samples, fadeIn: mp3.fadeIn, fadeOut: mp3.fadeOut } };
     } catch (e) {
       markOffline(e);
       return fail(e && e.user ? e.message : '没上架成功：' + ((e && e.message) || e));
@@ -1203,13 +1419,24 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     M.player = { id: id, mode: mode, el: el };
     function end() { if (M.player.el === el) { stopPlay(); rerender(); } }
     if (mode === 'preview') {
-      el.addEventListener('timeupdate', function () { if (el.currentTime >= MK.previewSec) { end(); toast('info', '试听到这儿。想听完整部，付 ' + money(w.price) + '。'); } });
+      // 试听从卖家挑的 preview_at 开始放 10 秒（老作品 / 没挑 = 0）；元数据到了再跳一次，有的浏览器没加载前设 currentTime 不算数
+      var from = previewAt(w), seek = function () { try { if (from > 0 && el.currentTime < from - 0.5) el.currentTime = from; } catch (e) {} };
+      M.player.from = from;
+      try { if (from > 0) el.currentTime = from; } catch (e) {}
+      el.addEventListener('loadedmetadata', seek);
+      el.addEventListener('timeupdate', function () { if (el.currentTime >= from + MK.previewSec) { end(); toast('info', '试听到这儿。想听完整部，付 ' + money(w.price) + '。'); } });
       M.player.timer = setTimeout(end, 40000);   // 加载太慢的兜底
     }
     el.addEventListener('ended', end);
     el.addEventListener('error', function () { if (M.player.el === el) { toast('warning', '声音文件没加载出来'); end(); } });
     try { var pr = el.play(); if (pr && pr.catch) pr.catch(function () { end(); }); } catch (e) { end(); }
     rerender();
+  }
+  function previewAt(w) {   // 服务器回的 preview_at（文件里的第几秒）；越界 / 没有 = 0
+    var p = Number(w && w.preview_at), d = Number(w && w.duration_sec);
+    if (!(p > 0)) return 0;
+    if (d > 0) p = Math.min(p, Math.max(0, d - 1));
+    return r1(p);
   }
   function hasBought(st, id) { id = Number(id); return !!M.paid[id] || onlineOf(st).bought && onlineOf(st).bought.indexOf(id) >= 0; }
   async function buyAndPlay(id) {
@@ -1265,7 +1492,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     var g = gvGet(), f = Array.isArray(g.fav) ? g.fav : [], id = Number(w.id);
     var i = f.findIndex(function (x) { return Number(x.id) === id; });
     if (i >= 0) f.splice(i, 1);
-    else { f.push({ id: id, title: w.title, agency: w.agency, agency_id: w.agency_id, stage_name: w.stage_name, talent_id: w.talent_id, tier: w.tier, price: w.price, tags: w.tags || [], audio_path: w.audio_path, sales: w.sales, stars: w.stars, stars_n: w.stars_n }); if (f.length > MK.favCap) f = f.slice(-MK.favCap); }
+    else { f.push({ id: id, title: w.title, agency: w.agency, agency_id: w.agency_id, stage_name: w.stage_name, talent_id: w.talent_id, tier: w.tier, price: w.price, tags: w.tags || [], audio_path: w.audio_path, preview_at: w.preview_at || 0, duration_sec: w.duration_sec, sales: w.sales, stars: w.stars, stars_n: w.stars_n }); if (f.length > MK.favCap) f = f.slice(-MK.favCap); }
     g.fav = f; gvSet(g);
     return i < 0;
   }
@@ -1346,7 +1573,8 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     h += '<div class="mk-page"><div class="mk-pcov">' + cover(w, true) + '</div><div class="mk-pinfo"><h3 class="mk-ph">' + esc(w.title) + '</h3>' +
       '<table class="mk-spec"><tr><th>社团名</th><td>' + linkAgency(w) + '</td></tr><tr><th>声优</th><td>' + linkTalent(w) + '</td></tr>' +
       '<tr><th>档位</th><td>' + tierTag(w.tier) + '</td></tr><tr><th>标签</th><td>' + ((w.tags || []).map(function (t) { return '<button class="mk-tag" data-act="mk-tagq" data-v="' + esc(t) + '">' + esc(t) + '</button>'; }).join('') || '—') + '</td></tr>' +
-      '<tr><th>时长</th><td>' + esc(Math.round(Number(w.duration_sec) || 0)) + ' 秒</td></tr><tr><th>上架</th><td>' + esc(String(w.created_at || '').slice(0, 10)) + '</td></tr></table>' +
+      '<tr><th>时长</th><td>' + esc(Math.round(Number(w.duration_sec) || 0)) + ' 秒</td></tr>' +
+      (previewAt(w) > 0 ? '<tr><th>试听</th><td>从 ' + esc(mmss(previewAt(w))) + ' 起 ' + MK.previewSec + ' 秒</td></tr>' : '') + '<tr><th>上架</th><td>' + esc(String(w.created_at || '').slice(0, 10)) + '</td></tr></table>' +
       (w.blurb ? '<p class="mk-blurb">' + esc(w.blurb) + '</p>' : '') +
       '<div class="mk-buybox"><div class="mk-price">' + esc(money(w.price)) + '<small>/ 每听一次</small></div><div class="mk-nums">被听了 <b>' + esc(w.sales || 0) + '</b> 次</div>' +
       '<div class="mk-acts">' + playBtns(w) + '</div>' +
@@ -1456,19 +1684,20 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     var w = (st.works || []).find(function (x) { return x.id === m.id; }); if (!w) return '';
     var up = M.ui.up && M.ui.up.id === m.id ? M.ui.up : null, running = up && !up.done && up.stage !== 'form';
     if (up && up.done) {
-      return '<div class="sh-modal"><div class="sh-dialog"><h3>《' + esc(w.title) + '》上架了</h3><p>' + esc(up.sec) + ' 秒 · ' + esc(up.kb) + ' KB' + (up.truncated ? '（超过 3 分钟的部分截掉了）' : '') + '。有真人付费听，下次打开社长室时周阿姨会入账。</p>' +
+      return '<div class="sh-modal"><div class="sh-dialog"><h3>《' + esc(w.title) + '》上架了</h3><p>' + esc(up.sec) + ' 秒 · ' + esc(up.kb) + ' KB' + (up.cut ? '（上架的是 ' + esc(up.cut) + ' 这段）' : up.truncated ? '（超过 3 分钟的部分截掉了）' : '') + (up.pv ? '，试听从 ' + esc(mmss(up.pv)) + ' 开始' : '') + '。有真人付费听，下次打开社长室时周阿姨会入账。</p>' +
         '<div class="row"><button class="sh-btn" data-act="mk-close">好</button><button class="sh-btn pri" data-act="mk-work" data-id="' + esc(up.serverId) + '" data-close="1">去作品页看看</button></div></div></div>';
     }
-    var tier = (w.script && w.script.tier) || '全年龄', price = m.price != null ? m.price : defaultPrice(tier);
+    var tier = (w.script && w.script.tier) || '全年龄', price = m.price != null ? m.price : defaultPrice(tier), mixing = !!(M.mix && M.mix.id === m.id && M.mix.busy);
     return '<div class="sh-modal"><div class="sh-dialog mk-up"><h3>上架到联机市场</h3>' +
       '<p>' + esc(w.stageName || '') + ' · ' + tierTag(tier) + ' · ' + esc(ctx().agencyName ? ctx().agencyName(st) : '') + ' 出品</p>' +
       '<div class="sh-label">作品名</div><input id="mk-up-title" maxlength="30" value="' + esc(m.title != null ? m.title : w.title) + '"' + (running ? ' disabled' : '') + '>' +
       '<div class="sh-label" style="margin-top:10px">一句话简介</div><input id="mk-up-blurb" maxlength="60" value="' + esc(m.blurb != null ? m.blurb : (w.blurb || '')) + '"' + (running ? ' disabled' : '') + '>' +
       '<div class="sh-label" style="margin-top:10px">每听一次的价钱（¥' + MK.priceMin + '–¥' + MK.priceMax + '）</div><input id="mk-up-price" type="number" inputmode="numeric" min="' + MK.priceMin + '" max="' + MK.priceMax + '" value="' + esc(price) + '"' + (running ? ' disabled' : '') + '>' +
-      '<label class="mk-confirm"><input type="checkbox" id="mk-up-ok"' + (m.confirmed ? ' checked' : '') + (running ? ' disabled' : '') + '> 我确认：这部作品的声音、标题、简介、艺名会公开给所有玩家；作品里的人都是成年人。超过 3 分钟的部分会截掉。</label>' +
+      trimHtml(m, running) +
+      '<label class="mk-confirm"><input type="checkbox" id="mk-up-ok"' + (m.confirmed ? ' checked' : '') + (running ? ' disabled' : '') + '> 我确认：这部作品的声音、标题、简介、艺名会公开给所有玩家；作品里的人都是成年人。</label>' +
       '<div class="err">' + esc(up && up.err ? up.err : (m.err || '')) + '</div>' +
       (running ? '<p class="sh-wait">' + esc(STAGE_ZH[up.stage] || '') + (up.stage === 'mix' && up.prog ? ' ' + esc(up.prog) : '') + '</p>' : '') +
-      '<div class="row"><button class="sh-btn" data-act="mk-close"' + (running ? ' disabled' : '') + '>再想想</button><button class="sh-btn pri" data-act="mk-up-ok" data-id="' + esc(w.id) + '"' + (running ? ' disabled' : '') + '>上架</button></div></div></div>';
+      '<div class="row"><button class="sh-btn" data-act="mk-close"' + (running ? ' disabled' : '') + '>再想想</button><button class="sh-btn pri" data-act="mk-up-ok" data-id="' + esc(w.id) + '"' + (running || mixing ? ' disabled' : '') + '>' + (mixing ? '混音中…' : '上架') + '</button></div></div></div>';
   }
 
   // 点击：data-act 以 mk- 开头的都归这里。返回 true = 处理了
@@ -1492,7 +1721,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
       case 'mk-rankkind': u.rank = v; break;
       case 'mk-period': u.period = v; break;
       case 'mk-rtier': u.tier = v; break;
-      case 'mk-work': if (el.getAttribute('data-close')) { u.modal = null; M.ui.up = null; } go('work'); M.data.work = null; loadWork(id); break;
+      case 'mk-work': if (el.getAttribute('data-close')) { u.modal = null; M.ui.up = null; trimStop(); } go('work'); M.data.work = null; loadWork(id); break;
       case 'mk-agency': go('agency'); M.data.agency = null; loadAgency(id); break;
       case 'mk-talent': go('talent'); M.data.talent = null; loadTalent(id); break;
       case 'mk-preview': var pw = findWork(id); if (pw) { if (M.player.id === Number(id) && M.player.mode === 'preview') stopPlay(); else play(pw, 'preview'); } break;
@@ -1512,14 +1741,17 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
         m.busy = true;
         report(m.id, m.reason).then(function (res) { if (res.ok) { u.modal = null; toast('success', '收到了，运营会看。'); } else { m.busy = false; m.err = res.msg; } rerender(); });
         break;
-      case 'mk-up': u.modal = { kind: 'upload', id: id }; M.ui.up = null; break;
+      case 'mk-up': u.modal = { kind: 'upload', id: id }; M.ui.up = null; prepMix(id).catch(function () {}); break;   // 一打开就混，混好出裁剪
+      case 'mk-tr-mix': if (u.modal && u.modal.kind === 'upload') { if (M.mix && M.mix.err) M.mix = null; prepMix(u.modal.id).catch(function () {}); } break;
+      case 'mk-tr-play': trimPlay('sel'); return true;
+      case 'mk-tr-pv': trimPlay('pv'); return true;
       case 'mk-up-ok':
         var mm = u.modal; if (!mm) break;
         var ti = q('#mk-up-title'), bi = q('#mk-up-blurb'), pi = q('#mk-up-price'), ok = q('#mk-up-ok');
         mm.title = ti ? ti.value : mm.title; mm.blurb = bi ? bi.value : mm.blurb; mm.price = pi ? pi.value : mm.price; mm.confirmed = !!(ok && ok.checked);
-        uploadWork(mm.id, { title: mm.title, blurb: mm.blurb, price: mm.price, confirmed: mm.confirmed });
+        uploadWork(mm.id, { title: mm.title, blurb: mm.blurb, price: mm.price, confirmed: mm.confirmed, trim: mm.trim });
         return true;
-      case 'mk-close': if (!(M.ui.up && !M.ui.up.done && M.ui.up.stage !== 'form')) { u.modal = null; M.ui.up = null; } break;
+      case 'mk-close': if (!(M.ui.up && !M.ui.up.done && M.ui.up.stage !== 'form')) { u.modal = null; M.ui.up = null; trimStop(); if (M.mix && !M.mix.busy) M.mix = null; } break;
       case 'mk-read': ctx().save(function (s) { normOnline(s).letters.forEach(function (l) { l.read = true; }); }).then(rerender); return true;
       default: return false;
     }
@@ -1527,7 +1759,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     return true;
   }
   function onOpen() { if (online()) syncInbox(false); }
-  function onClose() { stopPlay(); }
+  function onClose() { stopPlay(); trimStop(); }
 
   var CSS = [
     '#shacho-panel .mk{margin-top:26px;padding-top:18px;border-top:1px solid var(--sh-line);min-width:0;max-width:100%;}',
@@ -1619,6 +1851,21 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     '#shacho-panel .mk-up input[type=number]{font-size:18px;}',
     '#shacho-panel .mk-confirm{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;color:var(--sh-sub);margin-top:12px;line-height:1.6;cursor:pointer;}',
     '#shacho-panel .mk-confirm input{width:20px!important;min-height:20px!important;height:20px;flex:none;margin-top:2px;}',
+    // 上架前裁剪：波形 + 三根滑块（开始 / 结束 / 试听从）
+    '#shacho-panel .mk-trim{margin-top:14px;padding:12px;border:1px solid var(--sh-line);border-radius:12px;background:var(--sh-paper);}',
+    '#shacho-panel .mk-tr-wait{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-size:13.5px;color:var(--sh-sub);line-height:1.6;}',
+    '#shacho-panel .mk-wave{display:block;width:100%;height:56px;margin:2px 0 6px;border-radius:6px;background:var(--sh-card);}',
+    '#shacho-panel .mk-wave .bars{fill:var(--sh-ink);}',
+    '#shacho-panel .mk-wave .dim{fill:var(--sh-paper);opacity:.72;}',
+    '#shacho-panel .mk-wave .pv{fill:var(--sh-accent);opacity:.28;}',
+    '#shacho-panel .mk-tr-row{display:flex;align-items:center;gap:8px;margin:2px 0;}',
+    '#shacho-panel .mk-tr-row>span{flex:none;width:3.6em;font-size:13.5px;color:var(--sh-sub);font-weight:700;}',
+    '#shacho-panel .mk-tr-row>b{flex:none;width:3em;text-align:right;font-size:14px;font-variant-numeric:tabular-nums;}',
+    '#shacho-panel .sh-dialog .mk-tr-row input[type=range]{flex:1;width:auto;min-width:0;min-height:0;height:36px;padding:0;margin:0;border:0;background:transparent;accent-color:var(--sh-accent);touch-action:pan-y;}',
+    '#shacho-panel .mk-tr-txt{font-size:15px;font-weight:800;margin:4px 0 0;font-variant-numeric:tabular-nums;}',
+    '#shacho-panel .mk-tr-hint{font-size:12.5px;color:var(--sh-accent);min-height:0;}#shacho-panel .mk-tr-hint:empty{display:none;}',
+    '#shacho-panel .mk-tr-note{font-size:12.5px;color:var(--sh-faint);margin:2px 0 4px;}',
+    '#shacho-panel .mk-trim .mk-acts .sh-btn{flex:1;}',
     // 手机：一列，按钮够大
     '@media (max-width:899px){',
     '  #shacho-panel .mk-grid{grid-template-columns:minmax(0,1fr);gap:10px;}',
@@ -1640,6 +1887,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
   //   doc → 酒馆页面的 document（装样式用），可不给
   //   测试用：fetch / lame / Audio / Blob / gvGet / gvSet
   function init(c) {
+    if (M._inEl) { try { M._inEl.removeEventListener('input', onInput); M._inEl.removeEventListener('change', onInput); } catch (e) {} M._inEl = null; }
     M.ctx = c || {};
     M.api = makeApi({ fetch: M.ctx.fetch, server: M.ctx.server, key: M.ctx.key, timeoutMs: M.ctx.timeoutMs });
     M.inited = true;
@@ -1647,15 +1895,24 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
       var D = M.ctx.doc;
       if (D && D.head) { var old = D.getElementById('shacho-mk-style'); if (old) old.remove(); var s = D.createElement('style'); s.id = 'shacho-mk-style'; s.textContent = CSS; D.head.appendChild(s); }
     } catch (e) {}
+    try {   // 弹层里的滑块 / 输入框：shacho.js 的 input 监听不管 mk- 的，这里自己挂一个（只认上架弹层里的那几个）
+      var P = M.ctx.panel && M.ctx.panel();
+      if (P && P.addEventListener) { P.addEventListener('input', onInput); P.addEventListener('change', onInput); M._inEl = P; }
+    } catch (e) {}
     return API;
   }
-  function cleanup() { stopPlay(); try { var D = ctx().doc; var el = D && D.getElementById('shacho-mk-style'); if (el) el.remove(); } catch (e) {} }
+  function cleanup() {
+    stopPlay(); trimStop(); M.mix = null;
+    if (M._inEl) { try { M._inEl.removeEventListener('input', onInput); M._inEl.removeEventListener('change', onInput); } catch (e) {} M._inEl = null; }
+    try { if (M.actx && M.actx.close) M.actx.close(); } catch (e) {} M.actx = null;
+    try { var D = ctx().doc; var el = D && D.getElementById('shacho-mk-style'); if (el) el.remove(); } catch (e) {} }
 
   var API = {
     init: init, cleanup: cleanup, onOpen: onOpen, onClose: onClose, renderSection: renderSection, boardHtml: boardHtml, uploadButton: uploadButton, renderModal: renderModal,
     handleAct: handleAct, checkStageName: checkStageName, syncInbox: syncInbox, uploadWork: uploadWork, buyAndPlay: buyAndPlay, rate: rate, report: report,
     isOff: isOff, setOff: setOff, online: online, identity: identity, ensureAgency: ensureAgency,
     // 纯函数（测试用）
+    normTrim: normTrim, mmss: mmss, peaksOf: peaksOf, prepMix: prepMix, trimPlay: trimPlay, trimStop: trimStop, trimInput: trimInput, previewAt: previewAt,
     minorsCheck: minorsCheck, textCheck: textCheck, buildListing: buildListing, tagsOf: tagsOf, clampPrice: clampPrice, defaultPrice: defaultPrice, encodeMp3: encodeMp3,
     applyInbox: applyInbox, inboxToast: inboxToast, parseBoard: parseBoard, mergedBoard: mergedBoard, makeApi: makeApi, normOnline: normOnline, genToken: genToken, zhInt: zhInt,
     favList: favList, toggleFav: toggleFav, loadList: loadList, loadRank: loadRank, loadBoard: loadBoard, loadWork: loadWork, loadAgency: loadAgency, loadTalent: loadTalent,
@@ -2644,6 +2901,29 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     var parts = sgSplit(l, 30);
     return pre.concat(parts.map(function (x, i) { return (cue && (i === 0 || cue === '喘') ? '[' + cue + '] ' : '') + x; }));
   }
+  // 录音室「改这句」：玩家手改一句念的字。规矩跟剧本行一样（≤30 字、至多一个提示），但不偷偷拆行、不偷偷丢提示——不对就说哪儿不对
+  //   → { text: '[贴近] 规整好的一行' } 或 { err: '给玩家看的一句' }
+  function sgEditLine(raw) {
+    var s = String(raw == null ? '' : raw).replace(/[\r\n]+/g, ' ').trim();
+    if (!s) return { err: '这句不能空着。' };
+    var t = s.replace(/[［【]/g, '[').replace(/[］】]/g, ']'), groups = [], cues = 0, bad = '';
+    t.replace(/\[([^\]]*)\]|[（(]([^（()）]*)[）)]/g, function (_, a, b) { groups.push(a != null ? a : b); return ''; });
+    groups.forEach(function (c) {
+      var r = sgMapCue(c);
+      if (!r || r.drop) { if (!bad) bad = '认不出提示「' + String(c).trim() + '」。能用的：' + SG_CUES.join(' '); }
+      else if (r.sfx || r.pause != null) { if (!bad) bad = '音效和停顿要单独占一行，这里只改她念的字。'; }
+      else cues++;
+    });
+    if (bad) return { err: bad };
+    if (cues > 1) return { err: '一句最多一个提示。' };
+    var out = sgNormLine(s);
+    if (!out.length || out.some(sgMute)) return { err: '这句没有能念的字。' };
+    if (out.length > 1) {
+      var n = out.reduce(function (a, x) { return a + sgSpokenLen(x.replace(/^\[[^\]]*\]\s*/, '')); }, 0);
+      return { err: '太长了：一句最多 30 个字（现在 ' + n + ' 字）。' };
+    }
+    return { text: out[0] };
+  }
   function sgMute(t) { return /^\[(音效|停)/.test(String(t || '')); }
   var SG_HDR = { '档位': 'tier', '类型': 'type', '场景': 'scene', '她是': 'who', '试听': 'trial', '标题': 'title' };
   var SG_MIN_VOICE = 6;
@@ -3140,7 +3420,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     RETRY_NOTE: RETRY_NOTE, TAKE_RETRY: TAKE_RETRY, TIER_ALL: TIER_ALL, SHY_FACT: SHY_FACT,
   };
   Object.assign(CORE, {   // 剧本库 + 随机写剧本
-    drawScriptSlots: drawScriptSlots, scriptSlotRows: scriptSlotRows, scriptSlotBraces: scriptSlotBraces, SG_SLOTS: SG_SLOTS, buildScriptPrompt: buildScriptPrompt, parseScript: parseScript, sgNormLine: sgNormLine, sgSplit: sgSplit,
+    drawScriptSlots: drawScriptSlots, scriptSlotRows: scriptSlotRows, scriptSlotBraces: scriptSlotBraces, SG_SLOTS: SG_SLOTS, buildScriptPrompt: buildScriptPrompt, parseScript: parseScript, sgNormLine: sgNormLine, sgEditLine: sgEditLine, sgSplit: sgSplit,
     scriptFileText: scriptFileText, addMyScript: addMyScript, setMyScripts: setMyScripts, setLibrary: setLibrary, libraryList: libraryList,
     scriptGroups: scriptGroups, scriptIndexOf: scriptIndexOf, tiersUpTo: tiersUpTo, SCRIPT_RETRY: SCRIPT_RETRY, SG_CAP: SG_CAP, sgClean: sgClean, sgFailKind: sgFailKind, sgFailText: sgFailText, SG_MIN_VOICE: SG_MIN_VOICE, TIER_ORDER: TIER_ORDER,
   });
@@ -3594,7 +3874,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     tab: lsGet('shacho_tab') || 'calendar', scriptIdx: 0, custom: ['', '', ''], useCustom: false, busy: false, modal: null, night: null,
     calSel: null, calOff: 0,   // 日历：选中的第几天（null=今天）、翻月偏移
     rh: { tid: null, mode: 0, custom: '', paste: '', chips: {}, dir: '', busy: false },   // 排练室：mode = 预设剧本序号 / 'custom' / 'paste'
-    st: { tid: null, sidx: 0 },   // 录音室：谁、哪份剧本（allScripts 的序号）
+    st: { tid: null, sidx: 0, edit: null },   // 录音室：谁、哪份剧本（allScripts 的序号）；edit = 正在改的那句 { sess, id, draft, err }
     settling: false,              // 上线结算进行中（弹层关不掉）
     wl: { pid: null, amt: '', err: '' },   // 账本里的理财：挑中的产品、填的金额
     sc: { busy: false, draft: '', pending: '', err: '', errRaw: '', stick: false },   // 💬 S.：输入框里的字、等她回的那句、报错
@@ -4099,7 +4379,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
   }
   async function recAll() {
     if (REC.all) return;
-    REC.all = true; stopAudio(); render();
+    REC.all = true; UI.st.edit = null; stopAudio(); render();
     var sess = readState().rec, n = 0;
     if (sess) {
       for (var i = 0; i < sess.lines.length; i++) {
@@ -4117,6 +4397,36 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     var st = readState(), sess = st.rec; if (!sess) return;
     var l = sess.lines[i], p = recPerson(st, sess); if (!l || !p) return;
     playSample(lineAid(l), l.text, p.voice && p.voice.fishId, lineSpd(sess, l));
+  }
+  // 改这句（10-18）：只改这一场 sess.lines 里的字，剧本原文不动。录过的：声音作废、回到没录（下回录算头一遍，不算重录），
+  //   改之前已经重录的次数记进 rt0，照样算分
+  function openRecEdit(i) {
+    var sess = readState().rec, l = sess && sess.lines[i];
+    if (!l || l.mute || REC.all || REC.busy[l.id]) return;
+    UI.st.edit = { sess: sess.id, id: l.id, draft: l.text, err: '' }; render();
+    var inp = PANEL.querySelector('#sh-rl-edit'); if (inp) { inp.focus(); try { var n = inp.value.length; inp.setSelectionRange(n, n); } catch (e) {} }
+  }
+  function closeRecEdit() { UI.st.edit = null; render(); }
+  async function saveRecEdit(i, raw) {
+    var st = readState(), sess = st.rec, ed = UI.st.edit; if (!ed) return;
+    var line = sess && sess.lines[i];
+    if (!line || sess.id !== ed.sess || line.id !== ed.id || line.mute) { closeRecEdit(); return; }
+    ed.draft = String(raw == null ? '' : raw);
+    if (REC.all || REC.busy[line.id]) { ed.err = '正在录音，录完再改。'; render(); return; }
+    var p = recPerson(st, sess), nm = p ? callShort(p.callYou) : '', chk = ed.draft;
+    if (nm) chk = chk.split(nm).join('{称呼}');   // 进棚时 {称呼} 已经换成她叫你的那个词；按剧本的算法数字数
+    var r = sgEditLine(chk);
+    if (r.err) { ed.err = r.err; render(); var inp = PANEL.querySelector('#sh-rl-edit'); if (inp) inp.focus(); return; }
+    var txt = fillTpl(r.text, p);
+    if (txt === line.text) { closeRecEdit(); return; }
+    for (var n = 0; n <= (Number(line.rec) || 0); n++) { var aid = line.id + '#' + n; if (AUD.curId === aid) stopAudio(); delete AUD.cache[aid]; }   // 旧字的声音作废
+    if (EXP.ready && EXP.ready.id === 'sess') dropReady();
+    await save(function (s) {
+      var l2 = s.rec && s.rec.id === sess.id && s.rec.lines[i]; if (!l2 || l2.id !== line.id) return;
+      l2.rt0 = (Number(l2.rt0) || 0) + Math.max(0, (Number(l2.rec) || 0) - 1);
+      l2.text = txt; l2.rec = 0; l2.mute = false; l2.edited = true; delete l2.spd;
+    });
+    UI.st.edit = null; render();
   }
   // 录音室的语速：这句自己调过 → 它；不然这场调过 → 这场；都没有 → ⚙ 的基础语速
   function lineSpd(sess, l) { return Number(l && l.speed) || Number(sess && sess.speed) || baseSpeed(); }
@@ -4164,7 +4474,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
   }
   function recStats(sess) {
     var spk = sess.lines.filter(function (l) { return !l.mute; });
-    return { lines: spk.length, recorded: spk.filter(function (l) { return l.rec > 0; }).length, retakes: spk.reduce(function (a, l) { return a + Math.max(0, (Number(l.rec) || 0) - 1); }, 0) };
+    return { lines: spk.length, recorded: spk.filter(function (l) { return l.rec > 0; }).length, retakes: spk.reduce(function (a, l) { return a + Math.max(0, (Number(l.rec) || 0) - 1) + (Number(l.rt0) || 0); }, 0) };   // rt0 = 改这句之前已经重录的次数，照算
   }
   async function abandonSession() { stopAudio(); await save(function (s) { delete s.rec; }); render(); }
 
@@ -4778,6 +5088,11 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     '#shacho-panel .sh-spd{display:inline-flex;align-items:center;gap:2px;font-size:12.5px;color:var(--sh-sub);white-space:nowrap;}',
     '#shacho-panel .sh-recbar .sh-spd{margin-right:0;}',
     '#shacho-panel .sh-rl .spdrow{margin-top:4px;}',
+    '#shacho-panel .sh-rl.edit{grid-template-columns:28px minmax(0,1fr);border-color:var(--sh-accent);background:var(--sh-accent-soft);}',
+    '#shacho-panel .sh-rl.edit .ops{grid-column:2;}',
+    '#shacho-panel .sh-rl .sh-rled{display:block;width:100%;box-sizing:border-box;min-height:44px;padding:0 12px;border:1px solid var(--sh-line);border-radius:8px;background:var(--sh-input);color:var(--sh-ink);font-size:16px;}',
+    '#shacho-panel .sh-rl .err{color:var(--sh-accent);font-size:13px;margin-top:4px;}',
+    '#shacho-panel .sh-rl.edit .cnt{margin-top:4px;}',
     '#shacho-panel .sh-mini{width:28px;height:28px;border-radius:7px;border:1px solid var(--sh-line);background:transparent;color:var(--sh-ink);font-size:15px;line-height:1;cursor:pointer;padding:0;}',
     '#shacho-panel .sh-mini:disabled{opacity:.35;cursor:default;}',
     '#shacho-panel .sh-sv{display:inline-block;min-width:46px;text-align:center;font-size:12.5px;font-weight:700;color:var(--sh-ink);font-variant-numeric:tabular-nums;}',
@@ -5255,14 +5570,21 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
         '<div class="sh-reclines">' + sess.lines.map(function (l, i) {
           var busy = !!REC.busy[l.id], aid = lineAid(l), on = AUD.curId === aid, pb = !!AUD.busy[aid];
           if (l.mute) { var so = parseSfx(l.text); return so && so.key && !so.stop ? sfxRow(l, i, so) : '<div class="sh-rl mute"><span class="no">' + String(i + 1).padStart(2, '0') + '</span><div class="tx">' + cueHtml(l.text) + '</div></div>'; }
+          var no = '<span class="no">' + String(i + 1).padStart(2, '0') + '</span>', ed = UI.st.edit;
+          if (ed && ed.sess === sess.id && ed.id === l.id && !busy && !REC.all) return '<div class="sh-rl edit" data-line="' + i + '">' + no +
+            '<div class="tx"><input class="sh-rled" id="sh-rl-edit" data-rl-edit data-i="' + i + '" maxlength="80" autocomplete="off" enterkeyhint="done" aria-label="改第 ' + (i + 1) + ' 句" value="' + esc(ed.draft) + '">' +
+            (ed.err ? '<div class="err">' + esc(ed.err) + '</div>' : '') +
+            '<span class="cnt">只改这一场录音，剧本原文不变' + (l.rec ? '；这句录过，改完要重新录（不算重录）' : '') + '。提示写在行首，如 [贴近]。</span></div>' +
+            '<div class="ops"><button class="sh-btn sm pri" data-act="rec-edit-ok" data-i="' + i + '">保存</button><button class="sh-btn sm" data-act="rec-edit-no" data-i="' + i + '">取消</button></div></div>';
           var eff = lineSpd(sess, l), stale = l.rec && l.spd && Math.abs(l.spd - eff) > 0.001;
           return '<div class="sh-rl' + (l.rec ? ' done' : '') + (busy ? ' busy' : '') + '" data-line="' + i + '"><span class="no">' + String(i + 1).padStart(2, '0') + '</span>' +
-            '<div class="tx">' + cueHtml(l.text) + (l.rec ? '<span class="cnt">录了 ' + l.rec + ' 次' + (stale ? ' · 语速改了，▶ 按 ' + spdText(eff) + ' 重新合成（不算重录）' : '') + '</span>' : '') + (busy ? '<span class="cnt">录音中……</span>' : '') +
+            '<div class="tx">' + cueHtml(l.text) + (l.rec ? '<span class="cnt">录了 ' + l.rec + ' 次' + (stale ? ' · 语速改了，▶ 按 ' + spdText(eff) + ' 重新合成（不算重录）' : '') + '</span>' : '') + (busy ? '<span class="cnt">录音中……</span>' : '') + (l.edited && !l.rec && !busy ? '<span class="cnt">改过，还没重新录</span>' : '') +
             '<div class="spdrow"><span class="sh-spd' + (l.speed ? ' own' : '') + '">语速 ' + spdCtl(i, eff, !!l.speed) + '</span></div></div>' +
             '<div class="ops">' +
             '<button class="sh-btn sm' + (l.rec ? '' : ' pri') + '" data-act="rec-line" data-i="' + i + '"' + (busy || l.rec ? ' disabled' : '') + '>录</button>' +
             '<button class="sh-play sm' + (on ? ' on' : '') + '" data-act="rec-play" data-i="' + i + '"' + (!l.rec || busy || pb ? ' disabled' : '') + ' aria-label="播放">' + (pb ? '…' : on ? '■' : '▶') + '</button>' +
-            '<button class="sh-btn sm" data-act="rec-redo" data-i="' + i + '"' + (busy || !l.rec ? ' disabled' : '') + '>重录</button></div></div>';
+            '<button class="sh-btn sm" data-act="rec-redo" data-i="' + i + '"' + (busy || !l.rec ? ' disabled' : '') + '>重录</button>' +
+            '<button class="sh-btn sm" data-act="rec-edit" data-i="' + i + '"' + (busy || REC.all ? ' disabled' : '') + '>改这句</button></div></div>';
         }).join('') + '</div>' +
         '<div style="margin-top:10px"><button class="sh-link" data-act="rec-abandon">这场不录了</button></div>';
     }
@@ -5884,6 +6206,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     var st = readState();
     var scroll = 0; var mainOld = PANEL.querySelector('.sh-main'); if (mainOld) scroll = mainOld.scrollTop;
     var dlgOld = PANEL.querySelector('.sh-dialog'), dlgScroll = dlgOld ? dlgOld.scrollTop : 0;   // 弹层里点选（理财挑产品）重渲染时不跳回顶
+    var edOld = PANEL.querySelector('#sh-rl-edit'), edFocus = edOld && edOld.ownerDocument.activeElement === edOld ? [edOld.selectionStart, edOld.selectionEnd] : null;   // 改这句时别处重渲染（播放、录完别的句子）不丢光标
     // 还没填营业执照（新聊天、v0.2 的老存档）→ 整个面板先是那张表，页签都先不给
     var setup = !st.agency;
     PANEL.classList.toggle('setup', setup);
@@ -5897,6 +6220,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     PANEL.innerHTML = renderHead(st) + renderNav() + '<main class="sh-main">' + broke + body + '</main>' + renderModal(st);
     var mainNew = PANEL.querySelector('.sh-main'); if (mainNew) mainNew.scrollTop = scroll;
     var dlgNew = PANEL.querySelector('.sh-dialog'); if (dlgNew && dlgOld) dlgNew.scrollTop = dlgScroll;
+    var edNew = edFocus && PANEL.querySelector('#sh-rl-edit'); if (edNew) { edNew.focus(); try { edNew.setSelectionRange(edFocus[0], edFocus[1]); } catch (e) {} }
     if (UI.tab === 'schat' && mainNew && UI.sc.stick) { UI.sc.stick = false; mainNew.scrollTop = mainNew.scrollHeight; }   // S. 回话了：滚到底
   }
 
@@ -5927,6 +6251,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     if (t && t.hasAttribute && t.hasAttribute('data-rh-input')) UI.rh[t.getAttribute('data-rh-input')] = t.value;
     if (t && t.hasAttribute && t.hasAttribute('data-wl-amt')) { UI.wl.amt = t.value; UI.wl.err = ''; }
     if (t && t.hasAttribute && t.hasAttribute('data-sc-input')) UI.sc.draft = t.value;
+    if (t && t.hasAttribute && t.hasAttribute('data-rl-edit') && UI.st.edit) UI.st.edit.draft = t.value;   // 打字不重渲染
     if (t && t.hasAttribute && t.hasAttribute('data-tts-spd')) { var sv = PANEL.querySelector('#sh-spd-v'); if (sv) sv.textContent = spdText(t.value); }
   });
   PANEL.addEventListener('change', function (e) {
@@ -5936,6 +6261,10 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     if (t.hasAttribute('data-sfx-k')) setSfxOpt(Number(t.getAttribute('data-i')) || 0, t.getAttribute('data-sfx-k'), t.value);
   });
   PANEL.addEventListener('keydown', function (e) {
+    if (e.target && e.target.id === 'sh-rl-edit' && !e.isComposing && e.keyCode !== 229) {   // 改这句：Enter 存，Esc 不改了（输入法选字时不算）
+      if (e.key === 'Enter') { e.preventDefault(); saveRecEdit(Number(e.target.getAttribute('data-i')) || 0, e.target.value); return; }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeRecEdit(); return; }
+    }
     if (e.key !== 'Enter') return;
     if (e.target && e.target.id === 'sh-sc-input' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); sSend(e.target.value); return; }
     if (e.target && e.target.id === 'sh-stage-input') { e.preventDefault(); confirmSign(UI.modal && UI.modal.id, e.target.value); }
@@ -5982,6 +6311,9 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     else if (act === 'st-start') startSession();
     else if (act === 'rec-line' || act === 'rec-redo') recLine(Number(t.getAttribute('data-i')) || 0, true);
     else if (act === 'rec-play') playLine(Number(t.getAttribute('data-i')) || 0);
+    else if (act === 'rec-edit') openRecEdit(Number(t.getAttribute('data-i')) || 0);
+    else if (act === 'rec-edit-ok') { var re = PANEL.querySelector('#sh-rl-edit'); saveRecEdit(Number(t.getAttribute('data-i')) || 0, re ? re.value : ''); }
+    else if (act === 'rec-edit-no') closeRecEdit();
     else if (act === 'rec-all') recAll();
     else if (act === 'rec-abandon') abandonSession();
     else if (act === 'rec-done') { stopAudio(); UI.modal = { kind: 'publish' }; render(); }
