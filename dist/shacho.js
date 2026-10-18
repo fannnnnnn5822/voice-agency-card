@@ -2195,7 +2195,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     var g = p.gen || {};
     var a = [
       '本名：' + (p.realName || (p.surname + (p.given || ''))) + (p.stageName ? '　艺名：' + p.stageName : ''),
-      '声线：' + (p.voice && p.voice.label),
+      '声线：' + ((voiceOf(p) || {}).label || (p.voice && p.voice.label)),
       '专长：' + p.specialty + '　业务水平：' + (p.skill && p.skill.label) + '（' + (p.skill && p.skill.rank) + '/5）',
       '底色：' + p.base + '　主色调：' + p.main + '　点缀：' + p.accent,
       '说话的收尾习惯：' + p.ending + '　怎么称呼社长：' + p.callYou,
@@ -2383,6 +2383,41 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
   // 顺序：我们的剧本库 → 还没替换的占位稿 → 试音稿 → 我写的（生成的，排最后：新写的追加在末尾，前面的序号不动）
   function allScripts() { return libraryList().concat(L.studioScripts || [], L.scripts || [], SG_MINE); }
   function scriptId(s) { return String((s && (s.id || s.title)) || ''); }
+  // ═══ 声线（10-18）：声优手里有好几种声线很正常。voice = 她的本音（永远在）；voices = 练出来的（最多 VOICE_EXTRA 种）；
+  //   voiceSel = 现在用哪一种（空 / 不在了 = 本音）。录音室进棚时记进 sess.fishId，排练每一遍记进 take.fishId，作品带 fishId
+  var VOICE_EXTRA = 3;
+  function voicesOf(p) {
+    if (!p) return [];
+    var base = p.voice && p.voice.fishId ? [{ label: p.voice.label || '', fishId: p.voice.fishId, base: true }] : [];
+    return base.concat((p.voices || []).filter(function (v) { return v && v.fishId && v.fishId !== (p.voice && p.voice.fishId); }));
+  }
+  function voiceOf(p, fishId) { var a = voicesOf(p), f = fishId || (p && p.voiceSel); return a.find(function (v) { return v.fishId === f; }) || a[0] || null; }
+  function voiceSelOf(p) { var v = voiceOf(p); return v ? v.fishId : ''; }
+  function voiceName(v) { return v ? (v.base ? '本音' : v.label) : ''; }
+  function learnableVoices(p) { var have = voicesOf(p).map(function (v) { return v.fishId; }); return (L.voice || []).filter(function (v) { return have.indexOf(v.fishId) < 0; }); }
+  // r = 存档里的那位（save 回调里用）。练满了 / 不在库里 / 已经会 → null
+  function learnVoice(r, fishId) {
+    if (!r || (r.voices || []).length >= VOICE_EXTRA) return null;
+    var v = learnableVoices(r).find(function (x) { return x.fishId === fishId; }); if (!v) return null;
+    r.voices = (r.voices || []).concat([{ label: v.label, fishId: v.fishId }]);
+    return v;
+  }
+  function forgetVoice(r, fishId) {   // 本音拿不掉
+    if (!r || !(r.voices || []).some(function (v) { return v.fishId === fishId; })) return false;
+    r.voices = r.voices.filter(function (v) { return v.fishId !== fishId; });
+    if (r.voiceSel === fishId) delete r.voiceSel;
+    return true;
+  }
+  function normVoices(r) {   // 老存档补 voices: []；去重、去掉和本音一样的、最多 VOICE_EXTRA 种；voiceSel 指不到就清掉
+    if (!r) return;
+    var seen = {}; if (r.voice && r.voice.fishId) seen[r.voice.fishId] = 1;
+    r.voices = (Array.isArray(r.voices) ? r.voices : []).filter(function (v) {
+      if (!v || typeof v.fishId !== 'string' || !v.fishId || seen[v.fishId]) return false;
+      seen[v.fishId] = 1; return true;
+    }).slice(0, VOICE_EXTRA).map(function (v) { return { label: String(v.label || ''), fishId: v.fishId }; });
+    if (r.voiceSel && (!seen[r.voiceSel] || r.voiceSel === (r.voice && r.voice.fishId))) delete r.voiceSel;
+  }
+  function sessFish(sess, p) { return (sess && sess.fishId) || (p && p.voice && p.voice.fishId) || ''; }
   function canRecord(r, script) { return tierIdx((script && script.tier) || TIER_ORDER[0]) <= tierIdx(r && r.tier); }
   function refuseLine(r) {
     var m = L.tierRefuse || {};
@@ -2836,7 +2871,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
   // ── 解析：头 + 编号台词。容错：缺编号、全角括号、圆括号动作（认得出语气的变提示，认不出的丢掉）、
   //    不认识的提示丢掉、音效钥匙不在清单里的丢掉、一行超过 30 字在标点处拆开 ──
   var SG_SYN = [   // [提示] → 我们认的那几个。先认喘，再认耳语……（圆括号里的长描写也按这个认）
-    ['喘', /喘|呻吟|娇吟|吸气|呼气|哈气|pant|moan|gasp|breath/i], ['耳语', /耳语|低语|悄悄|气声|气音|耳边|呢喃|whisper/i], ['贴近', /贴近|凑近|靠近|贴着|凑到/],
+    ['喘', /喘|呻吟|娇吟|吸气|呼气|哈气|pant|moan|gasp|breath/i], ['耳语', /耳语|低语|悄悄|气声|气音|耳边|呢喃|囁|ささや|耳語|低語|耳元|whisper/i], ['贴近', /贴近|凑近|靠近|贴着|凑到/],
     ['轻声', /轻声|小声|低声|轻轻|柔声|温柔|soft/i], ['笑', /笑|laugh|giggl|chuckl/i], ['哭腔', /哭|抽泣|哽咽|泣|sob|cry/i], ['冷', /冷|淡漠|面无表情|低沉|cold/i], ['急', /急|慌|快速|连珠|hurr/i],
   ];
   function sgMapCue(c) {
@@ -3017,6 +3052,52 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     s.myScripts.push(sc);
     if (s.myScripts.length > SG_CAP) s.myScripts = s.myScripts.slice(-SG_CAP);
   }
+  // ── 自己写的剧本（10-18 玩家要：「排练室能自己写，录音室怎么不能」）→ 跟生成的一样存进 myScripts，source = 自己写 ──
+  //   一行一句，走同一条 sgNormLine（提示认法、圆括号不念、长句在标点处拆）；不要头、不卡 16 句、不出写剧本那两条提醒
+  //   段落标题（「1. 开场……（贴耳低语）」「第二幕」「# 标题」「---」）不念，丢掉；圆括号里的翻译 / 说明一律不念
+  var CS_MAX_VOICE = 60, CS_MAX_CHARS = 6000, CS_TITLE = 20;
+  var CS_NUM = /^\s*(?:\d{1,2}|[一二三四五六七八九十]{1,3})\s*[.．、)）]\s*/;
+  function csHeading(r) {   // 一定是标题的行（不看上下文）
+    return /^#+\s*\S/.test(r) || /^第\s*[一二三四五六七八九十百\d]{1,3}\s*[幕段节章部场回]/.test(r) || /^[-—–_=＝*~～·•]{3,}$/.test(r) ||
+      /^[=＝]{2,}.*[=＝]{2,}$/.test(r) || /^(档位|类型|场景|她是|试听|标题)\s*[:：]/.test(r);
+  }
+  function csNumHead(r) {   // 「1. 开场……」这种带编号的：后面没提示、没引号的才可能是段落标题（整篇都这么编号的话算台词，见下面）
+    var m = r.match(CS_NUM); if (!m) return false;
+    return !/^[\[［【「“"『]/.test(r.slice(m[0].length));
+  }
+  function parseCustomScript(text, title, tier) {
+    var raw = String(text == null ? '' : text).replace(/\r\n?/g, '\n');
+    title = Array.from(String(title == null ? '' : title).replace(/\s+/g, ' ').trim().replace(/^[《「]|[》」]$/g, '')).slice(0, CS_TITLE).join('');
+    if (!title) return { ok: false, err: '给剧本起个标题。' };
+    if (!raw.trim()) return { ok: false, err: '剧本是空的。' };
+    if (Array.from(raw).length > CS_MAX_CHARS) return { ok: false, err: '太长了：最多 ' + CS_MAX_CHARS + ' 字。' };
+    var rows = raw.split('\n').map(function (x) { return x.replace(/\*\*/g, '').trim(); }).filter(Boolean);
+    // 编号行：整篇的台词都编了号（「1. 你好」「2. ……」）→ 是台词；有不编号的台词 → 编号的那几行是段落标题
+    var cand = rows.filter(function (r) { return !csHeading(r) && csNumHead(r); }).length;
+    var plain = rows.filter(function (r) { return !csHeading(r) && !CS_NUM.test(r) && sgNormLine(r).some(function (x) { return !sgMute(x); }); }).length;
+    var numHead = cand > 0 && plain > 0;
+    var lines = [];
+    rows.forEach(function (r) {
+      if (csHeading(r) || (numHead && csNumHead(r))) return;
+      // 句中、句尾的长圆括号（翻译、动作说明）先拿掉，免得里面碰巧有「笑」「冷」被当成提示；行首的短括号照旧认语气
+      var lead = (r.match(/^(?:\s*(?:\d{1,2}(?:\s+|\s*[.、:：)）]\s*))?(?:[\[［【][^\]］】]{0,24}[\]］】]|[（(][^（()）]{0,40}[）)])\s*)*/) || [''])[0];
+      var rest = r.slice(lead.length).replace(/[（(][^（()）]{7,}[）)]/g, '');
+      lines = lines.concat(sgNormLine(lead + rest));
+    });
+    lines = lines.filter(function (x, i) { return !(sgMute(x) && x === lines[i - 1]); });
+    while (lines.length && sgMute(lines[0]) && !/^\[音效/.test(lines[0])) lines.shift();   // 开头、收尾的空停顿去掉
+    while (lines.length && sgMute(lines[lines.length - 1]) && !/^\[音效/.test(lines[lines.length - 1])) lines.pop();
+    var voice = lines.filter(function (x) { return !sgMute(x); }).length;
+    if (!voice) return { ok: false, err: '没找到能念的句子。一行写一句她要念的话。', voice: 0, lines: lines };
+    if (voice > CS_MAX_VOICE) return { ok: false, err: '太长了：能念的有 ' + voice + ' 句，最多 ' + CS_MAX_VOICE + ' 句（拆成两份吧）。', voice: voice, lines: lines };
+    var e = Math.max(1, Math.min(lines.length, Math.round(lines.length * 0.75))), pad = function (n) { return String(n).padStart(2, '0'); };
+    var script = {
+      id: 'u' + Date.now().toString(36) + rndU32().toString(36), title: title,
+      tier: TIER_ORDER.indexOf(tier) >= 0 ? tier : TIER_ORDER[0], type: '自己写', scene: '', who: '',
+      trial: pad(Math.max(1, e - 3)) + '-' + pad(e), source: '自己写', lines: lines, at: Date.now(),
+    };
+    return { ok: true, script: script, voice: voice };
+  }
 
   // ═══ 正文知道社长室（10-18）═══
   // ① 每轮都挂一行【社长室近况】（事务所名 / 第几天 / 账上 / 旗下 + 上一轮以来面板里办的事），正文照它说钱、日子、旗下有谁
@@ -3063,7 +3144,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     var g = r.gen || {}, sk = r.skill || {};
     var must = [
       '旗下艺人「' + (r.stageName || '') + '」，本名' + (r.realName || '') + '，' + r.age + '岁，' + r.hometown + '人，第' + (r.signedDay || 1) + '天签约，身价' + feeText(r.fee),
-      '声线：' + ((r.voice && r.voice.label) || ''),
+      '声线：' + ((r.voice && r.voice.label) || '') + ((r.voices || []).length ? '（会好几种声线，还会：' + r.voices.map(function (v) { return v.label; }).join('、') + '）' : ''),
       '专长：' + (r.specialty || '') + '；业务' + (sk.label || '') + '(' + rankOf(r) + '/5)；尺度：' + (r.tier || ''),
       '三色：' + [r.base, r.main, r.accent].filter(Boolean).join('／'),
     ];
@@ -3419,10 +3500,15 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     loanBill: loanBill, takeLoan: takeLoan, payLoanMonth: payLoanMonth, payOffLoan: payOffLoan, marketBoard: marketBoard, rivalCap: rivalCap, hash01: hash01,
     RETRY_NOTE: RETRY_NOTE, TAKE_RETRY: TAKE_RETRY, TIER_ALL: TIER_ALL, SHY_FACT: SHY_FACT,
   };
+  Object.assign(CORE, {   // 声线
+    voicesOf: voicesOf, voiceOf: voiceOf, voiceSelOf: voiceSelOf, voiceName: voiceName, learnableVoices: learnableVoices, learnVoice: learnVoice, forgetVoice: forgetVoice,
+    normVoices: normVoices, sessFish: sessFish, VOICE_EXTRA: VOICE_EXTRA,
+  });
   Object.assign(CORE, {   // 剧本库 + 随机写剧本
     drawScriptSlots: drawScriptSlots, scriptSlotRows: scriptSlotRows, scriptSlotBraces: scriptSlotBraces, SG_SLOTS: SG_SLOTS, buildScriptPrompt: buildScriptPrompt, parseScript: parseScript, sgNormLine: sgNormLine, sgEditLine: sgEditLine, sgSplit: sgSplit,
     scriptFileText: scriptFileText, addMyScript: addMyScript, setMyScripts: setMyScripts, setLibrary: setLibrary, libraryList: libraryList,
     scriptGroups: scriptGroups, scriptIndexOf: scriptIndexOf, tiersUpTo: tiersUpTo, SCRIPT_RETRY: SCRIPT_RETRY, SG_CAP: SG_CAP, sgClean: sgClean, sgFailKind: sgFailKind, sgFailText: sgFailText, SG_MIN_VOICE: SG_MIN_VOICE, TIER_ORDER: TIER_ORDER,
+    parseCustomScript: parseCustomScript, CS_MAX_VOICE: CS_MAX_VOICE,
   });
   Object.assign(CORE, {   // 社长室用的模型 + 💬 S.
     LLM_SOURCES: LLM_SOURCES, llmSource: llmSource, llmApiOf: llmApiOf, llmFormErr: llmFormErr, withApi: withApi, llmCall: llmCall, hideKey: hideKey,
@@ -3458,6 +3544,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     if (s.audition && !Array.isArray(s.audition.cands)) s.audition = null;
     // 立绘（10-18）：老存档里的人没有号 → 按 id 补一个固定的（openPanel 发现补过会存一次档）
     fillPortraits(s.roster);
+    s.roster.forEach(normVoices);   // 10-18：声线
     if (s.audition) fillPortraits(s.audition.cands, s.roster.map(function (r) { return r && r.portrait; }));
     if (!s.takes || typeof s.takes !== 'object' || Array.isArray(s.takes)) s.takes = {};
     if (!Array.isArray(s.invites)) s.invites = [];
@@ -4275,11 +4362,11 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     try { data = await genTake(p, sc.text, prev, dir); }
     catch (e) { UI.rh.busy = false; render(); toast('warning', '她没念出来：' + ((e && e.message) || e)); return; }
     var take = { id: 't' + Date.now().toString(36) + rndU32().toString(36), n: (last ? Number(last.n) || takes.length : 0) + 1, day: st.day, at: Date.now(),
-      script: sc, dir: dir, read: data.read, note: data.note || '' };
+      script: sc, dir: dir, read: data.read, note: data.note || '', fishId: voiceSelOf(p), voice: voiceName(voiceOf(p)) };
     await save(function (s) { var a = s.takes[p.id] || (s.takes[p.id] = []); a.push(take); while (a.length > RH_CAP) a.shift(); });
     UI.rh.busy = false; UI.rh.chips = {}; UI.rh.dir = '';
     render();
-    playSample(take.id, take.read, p.voice && p.voice.fishId);   // 念完直接放；浏览器不让自动放就点 ▶
+    playSample(take.id, take.read, take.fishId || (p.voice && p.voice.fishId));   // 念完直接放；浏览器不让自动放就点 ▶
   }
   function rehearsalScene(p, sc, take, dir) {
     var nm = p.stageName || p.realName;
@@ -4348,7 +4435,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     if (!canRecord(p, s)) { toast('warning', (p.stageName || p.realName) + '：' + refuseLine(p)); return; }
     var src = recSource(st, p, s), cost = Number(E.sessionCost) || 0;
     var sid = 'r' + Date.now().toString(36) + rndU32().toString(36);
-    var sess = { id: sid, tid: p.id, sid: scriptId(s), title: s.title, tier: s.tier || TIER_ORDER[0], from: src.from, day: st.day, cost: cost, speed: null,
+    var sess = { id: sid, tid: p.id, sid: scriptId(s), title: s.title, tier: s.tier || TIER_ORDER[0], from: src.from, day: st.day, cost: cost, speed: null, fishId: voiceSelOf(p),
       lines: src.lines.map(function (t, i) { return { id: sid + '-' + i, text: t, rec: 0, mute: !lineSpeaks(t), speed: null }; }) };
     stopAudio(); dropReady();
     await save(function (s2) {
@@ -4365,7 +4452,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     var line = sess.lines[i]; if (!line || line.mute) return false;
     var p = recPerson(st, sess); if (!p) { toast('warning', '这场录音的艺人不在旗下了'); return false; }
     if (REC.busy[line.id]) return false;
-    var spd = lineSpd(sess, line), plan = ttsPlan(line.text, spd), fishId = p.voice && p.voice.fishId;
+    var spd = lineSpd(sess, line), plan = ttsPlan(line.text, spd), fishId = sessFish(sess, p);
     REC.busy[line.id] = 1; if (play) stopAudio(); render();
     try {
       for (var k = 0; k < plan.length; k++) if (plan[k].text) plan[k].url = await speakItem(plan[k], fishId);
@@ -4396,7 +4483,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
   function playLine(i) {
     var st = readState(), sess = st.rec; if (!sess) return;
     var l = sess.lines[i], p = recPerson(st, sess); if (!l || !p) return;
-    playSample(lineAid(l), l.text, p.voice && p.voice.fishId, lineSpd(sess, l));
+    playSample(lineAid(l), l.text, sessFish(sess, p), lineSpd(sess, l));
   }
   // 改这句（10-18）：只改这一场 sess.lines 里的字，剧本原文不动。录过的：声音作废、回到没录（下回录算头一遍，不算重录），
   //   改之前已经重录的次数记进 rt0，照样算分
@@ -4541,7 +4628,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     var rep = await genReport(w);
     var mul = Number((E.worthMul || {})[res.tier]) || 1, oldFee = Number(p.fee) || 0, newFee = Math.round(oldFee * mul * 10) / 10;
     var wid = 'w' + Date.now().toString(36) + rndU32().toString(36);
-    var work = { id: wid, title: title, blurb: blurb, agency: w.agency, talentId: p.id, stageName: w.stageName, fishId: p.voice && p.voice.fishId,
+    var work = { id: wid, title: title, blurb: blurb, agency: w.agency, talentId: p.id, stageName: w.stageName, fishId: sessFish(sess, p),
       script: { sid: sess.sid, title: s.title, tier: sess.tier }, from: sess.from,
       lines: sess.lines.map(function (l) { return { text: l.text, aid: lineAid(l), mute: !!l.mute, speed: l.mute ? null : lineSpd(sess, l) }; }),
       tier: res.tier, tierIdx: res.tierIdx, score: { inp: inp, res: res, why: why }, sales: sale.sales, price: sale.price, payout: sale.payout,
@@ -4683,7 +4770,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     st = st || readState(); var sess = st.rec; if (!sess) return null;
     var p = recPerson(st, sess), m = UI.modal || {};
     return { id: 'sess', title: (m.title != null && String(m.title).trim()) || sess.title, blurb: m.blurb || '', agency: agencyName(st), stageName: p ? (p.stageName || p.realName) : '',
-      fishId: p && p.voice && p.voice.fishId, script: { title: sess.title, tier: sess.tier },
+      fishId: sessFish(sess, p), script: { title: sess.title, tier: sess.tier },
       lines: sess.lines.map(function (l) { return { text: l.text, aid: lineAid(l), mute: !!l.mute, speed: l.mute ? null : lineSpd(sess, l) }; }) };
   }
   function workById(id) { return readState().works.find(function (x) { return x.id === id; }) || null; }
@@ -5346,6 +5433,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
       return '<div class="sh-row"><div class="ph"><span>' + esc((r.stageName || '?').slice(0, 1)) + '</span>' + portraitImg(r.portrait) + '</div>' +
         '<div><div class="nm">' + esc(r.stageName) + '</div><div class="rn">本名 ' + esc(r.realName) + ' · ' + esc(r.age) + ' 岁' + tierTag(r.tier) + '</div>' +
         '<div class="rn">' + esc(r.voice && r.voice.label) + ' · 第 ' + esc(r.signedDay) + ' 天签约</div>' +
+        '<div class="sh-vrow"><span class="lb">声线</span>' + voiceChips(r, 'tl') + '<button class="sh-link" data-act="voice-open" data-id="' + esc(r.id) + '">练新声线</button></div>' +
         '<div class="rn">身价 ' + esc(feeText(r.fee)) + ' · 月薪 ' + esc(moneyText(talentMonthly(r))) + (r.quirk ? ' · ' + esc(r.quirk) : '') + '</div></div>' +
         '<div class="rt">' + playBtn(r.id) + '<button class="sh-btn" data-act="to-rh" data-id="' + esc(r.id) + '">排练</button><button class="sh-btn" data-act="to-st" data-id="' + esc(r.id) + '">录音</button><button class="sh-btn" data-act="invite-r" data-id="' + esc(r.id) + '">叫她来</button></div></div>';
     }).join('') + '</div>';
@@ -5433,12 +5521,14 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     var takes = takesOf(st, p.id);
     var left = '<div class="sh-box"><div class="sh-label">① 叫谁来排</div><div class="sh-chips">' +
       st.roster.map(function (r) { return '<button class="sh-chip' + (r.id === p.id ? ' on' : '') + '" data-rh-who="' + esc(r.id) + '">' + esc(r.stageName || r.realName) + '</button>'; }).join('') + '</div>' +
-      '<div class="sh-hint">' + esc(p.realName) + ' · ' + esc(p.voice && p.voice.label) + ' · ' + esc(p.skill && p.skill.label) + '</div></div>';
+      '<div class="sh-hint">' + esc(p.realName) + ' · ' + esc((voiceOf(p) || {}).label || '') + ' · ' + esc(p.skill && p.skill.label) + '</div>' + voiceChips(p, 'rh') + '</div>';
     left += '<div class="sh-box"><div class="sh-label">② 剧本</div>' + scriptPicker(p, 'rh') + '<div class="sh-chips">' +
       '<button class="sh-chip' + (R.mode === 'custom' ? ' on' : '') + '" data-rh-mode="custom">自己写</button>' +
       '<button class="sh-chip' + (R.mode === 'paste' ? ' on' : '') + '" data-rh-mode="paste">贴剧本</button></div>';
     if (R.mode === 'custom') left += '<textarea data-rh-input="custom" maxlength="300" placeholder="写几句给她念，一行一句，300 字以内">' + esc(R.custom) + '</textarea>';
     else if (R.mode === 'paste') left += '<textarea class="long" data-rh-input="paste" maxlength="2000" placeholder="整段剧本贴进来（2000 字以内）。越长，她念得越久，Fish 合成也越久。">' + esc(R.paste) + '</textarea>';
+    // 10-18：自己写 / 贴的剧本存进「我写的」，录音室就能录（打字不重渲染，所以按钮一直在，空着点会提示）
+    if (R.mode === 'custom' || R.mode === 'paste') left += '<div class="sh-sggo"><button class="sh-btn" data-act="cs-open" data-id="rh">存成剧本（录音室能录）</button></div>';
     else {
       var s = allScripts()[Number(R.mode) || 0] || allScripts()[0];
       left += scriptMeta(s);
@@ -5461,7 +5551,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     if (!takes.length) right += '<div class="sh-empty">挑好剧本，点「听她念」。每一遍都会留在这里，能来回比着听。</div>';
     else {
       right += '<div class="sh-takes">' + takes.slice().reverse().map(function (t, i) {
-        return '<div class="sh-take' + (i === 0 ? ' last' : '') + '"><div class="th">' + takePlay(t) + '<div><b>第 ' + esc(t.n) + ' 遍</b><span>《' + esc(t.script && t.script.title) + '》 · 第 ' + esc(t.day) + ' 天</span>' +
+        return '<div class="sh-take' + (i === 0 ? ' last' : '') + '"><div class="th">' + takePlay(t) + '<div><b>第 ' + esc(t.n) + ' 遍</b><span>《' + esc(t.script && t.script.title) + '》 · 第 ' + esc(t.day) + ' 天' + (t.voice && t.voice !== '本音' ? ' · ' + esc(t.voice) : '') + '</span>' +
           (t.dir ? '<span class="dr">指导：' + esc(t.dir) + '</span>' : '') + '</div></div>' +
           '<div class="rd">' + String(t.read || '').split(/\s*[／\/]\s*/).filter(Boolean).map(function (l) { return '<div>' + esc(l) + '</div>'; }).join('') + '</div>' +
           (t.note ? '<div class="nt">她说：' + esc(t.note) + '</div>' : '') + '</div>';
@@ -5544,7 +5634,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     if (!canRecord(p, s)) { var firstOk = all.findIndex(function (x) { return canRecord(p, x); }); if (firstOk >= 0) { UI.st.sidx = firstOk; s = all[firstOk]; } }
     var left = '<div class="sh-box"><div class="sh-label">① 谁来录</div><div class="sh-chips">' +
       st.roster.map(function (r) { return '<button class="sh-chip' + (r.id === p.id ? ' on' : '') + '" data-st-who="' + esc(r.id) + '">' + esc(r.stageName || r.realName) + '</button>'; }).join('') + '</div>' +
-      '<div class="sh-hint">' + esc(p.realName) + ' · ' + esc(p.skill && p.skill.label) + ' · 接受尺度 ' + tierTag(p.tier) + '</div></div>';
+      '<div class="sh-hint">' + esc(p.realName) + ' · ' + esc(p.skill && p.skill.label) + ' · 接受尺度 ' + tierTag(p.tier) + '</div>' + voiceChips(p, 'st') + '</div>';
     var locked = all.filter(function (x) { return !canRecord(p, x); });
     left += '<div class="sh-box"><div class="sh-label">② 剧本（她的尺度以内的才能录）</div>' + scriptPicker(p, 'st');
     // 10-18 玩家报告：原来写「N 份超出她的尺度」+ 她拒绝的话，紧挨着下面选中的剧本，读起来像她在拒绝这一份。改成说清楚是「另外几份，没列出来」
@@ -5553,16 +5643,18 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     left += scriptMeta(s);
     left += '<div class="sh-lines">' + src.lines.map(function (l) { return '<div' + (lineSpeaks(l) ? '' : ' class="mute"') + '>' + cueHtml(l) + '</div>'; }).join('') + '</div>' +
       '<div class="sh-hint">' + (src.from.kind === 'take' ? '她排练过这份，从她第 ' + esc(src.from.n) + ' 遍的念法开始录。' : '她还没排练过这份，从剧本原文开始录。排练过、给过指导的作品卖得更好。') + '</div>';
-    var same = sess && sess.tid === p.id && sess.sid === scriptId(s);
+    // 声线跟剧本一样：换了就是另一场（棚里那场照旧用进棚时的声线，要换就重新进棚）
+    var sameScript = sess && sess.tid === p.id && sess.sid === scriptId(s), same = sameScript && sessFish(sess, p) === voiceSelOf(p);
     var cost = Number(E.sessionCost) || 0;
-    if (!same) left += '<div class="sh-rhgo"><button class="sh-btn pri big" data-act="st-start">' + (sess ? '换这份重新进棚' : '进棚') + (cost ? '（棚费 ' + esc(moneyText(cost)) + '）' : '') + '</button></div>' +
+    if (!same) left += '<div class="sh-rhgo"><button class="sh-btn pri big" data-act="st-start">' + (sess ? (sameScript ? '换这个声线重新进棚' : '换这份重新进棚') : '进棚') + (cost ? '（棚费 ' + esc(moneyText(cost)) + '）' : '') + '</button></div>' +
       (sess ? '<div class="sh-hint">现在棚里录着的《' + esc(sess.title) + '》会作废，棚费不退。</div>' : '');
     left += '</div>';
     var right;
     if (!sess) right = '<div class="sh-dayh">棚里<small>空着</small></div><div class="sh-empty">挑好人和剧本，点「进棚」。一句一句录，哪句不满意就重录。</div>';
     else {
       var who = recPerson(st, sess), rs = recStats(sess);
-      right = '<div class="sh-dayh">《' + esc(sess.title) + '》<small>' + esc(who ? (who.stageName || who.realName) : '?') + ' · ' + esc(sess.tier) + '</small></div>' +
+      right = '<div class="sh-dayh">《' + esc(sess.title) + '》<small>' + esc(who ? (who.stageName || who.realName) : '?') + ' · ' + esc(sess.tier) +
+        (who && voicesOf(who).length > 1 ? ' · ' + esc(voiceName(voiceOf(who, sessFish(sess, who)))) : '') + '</small></div>' +
         '<div class="sh-recbar"><span>已录 <b>' + rs.recorded + '</b>/' + rs.lines + ' 句 · 重录 ' + rs.retakes + ' 次</span>' +
         '<span class="sh-spd all" title="这场的语速（单句没调过的都跟它）">整场语速 ' + spdCtl(-1, lineSpd(sess, null), false) + '</span>' +
         '<button class="sh-btn" data-act="rec-all"' + (REC.all || rs.recorded >= rs.lines ? ' disabled' : '') + '>' + (REC.all ? '录音中……' : '全部录') + '</button>' +
@@ -5771,6 +5863,8 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     var mkm = MARKET ? MARKET.renderModal(st) : ''; if (mkm) return mkm;   // 联机市场的弹层（上架 / 举报）
     var m = UI.modal; if (!m) return '';
     if (m.kind === 'scriptgen') return renderScriptGenModal(st);
+    if (m.kind === 'customscript') return renderCustomScriptModal(st);
+    if (m.kind === 'voices') return renderVoiceModal(st);
     if (m.kind === 'ledger') return renderLedger(st);
     if (m.kind === 'publish') return renderPublish(st);
     if (m.kind === 'settle') return renderSettle(st);
@@ -5886,6 +5980,24 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     '#shacho-panel .sh-sgcard .sh-lines{max-height:42vh;overflow-y:auto;margin-bottom:8px;}',
     '#shacho-panel .sh-sgwarn{font-size:12.5px;color:var(--sh-faint);margin:0 0 6px;}',
     '#shacho-panel .sh-sgdlg .row{flex-wrap:wrap;}',
+    // 声线（10-18）
+    '#shacho-panel .sh-vrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px;}',
+    '#shacho-panel .sh-vrow .lb{font-size:12.5px;color:var(--sh-faint);margin-right:2px;}',
+    '#shacho-panel .sh-vrow .sh-vchips{display:contents;}',
+    '#shacho-panel .sh-vchips{margin-top:8px;}',
+    '#shacho-panel .sh-vchips .sh-chip{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}',
+    '#shacho-panel .sh-vdlg{width:min(520px,100%);}',
+    '#shacho-panel .sh-vlist{display:flex;flex-direction:column;gap:8px;margin:0 0 12px;}',
+    '#shacho-panel .sh-vit{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--sh-line);border-radius:10px;}',
+    '#shacho-panel .sh-vit.on{border-color:var(--sh-accent);}',
+    '#shacho-panel .sh-vit .tx{flex:1;min-width:0;font-size:14px;overflow-wrap:anywhere;}#shacho-panel .sh-vit .tx span{display:block;font-size:12.5px;color:var(--sh-sub);}',
+    '#shacho-panel .sh-vit .sh-btn,#shacho-panel .sh-vit .sh-link{flex:none;}',
+    '#shacho-panel .sh-vdlg .sh-label small{margin-left:8px;font-weight:400;color:var(--sh-faint);}',
+    // ✍ 自己写（10-18）
+    '#shacho-panel .sh-csdlg .sh-label{margin-top:10px;}#shacho-panel .sh-csdlg .sh-label small{margin-left:8px;font-weight:400;color:var(--sh-faint);}',
+    '#shacho-panel .sh-csdlg input{min-height:46px;font-size:16px;}',
+    '#shacho-panel .sh-csdlg select{display:block;width:100%;min-height:46px;padding:0 12px;border:1px solid var(--sh-line);border-radius:10px;background:var(--sh-input);color:var(--sh-ink);font-size:16px;}',
+    '#shacho-panel .sh-csdlg textarea{display:block;width:100%;box-sizing:border-box;min-height:220px;padding:10px 12px;border:1px solid var(--sh-line);border-radius:10px;background:var(--sh-input);color:var(--sh-ink);font-size:16px;line-height:1.6;resize:vertical;}',
   ].join('\n');
   try { styleEl.textContent += '\n' + SG_CSS; } catch (e) {}
 
@@ -5902,14 +6014,15 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
   // 选单：三组 chip，每个带档位小字；超出她尺度的锁上（照旧）。room = 'rh'（排练室，data-rh-mode）/ 'st'（录音室，data-st-sid）
   function scriptPicker(p, room) {
     var attr = room === 'rh' ? 'data-rh-mode' : 'data-st-sid', sel = room === 'rh' ? UI.rh.mode : Number(UI.st.sidx);
-    var h = '<div class="sh-sggo"><button class="sh-btn" data-act="sg-open" data-id="' + room + '">写一份新剧本</button>';
+    var h = '<div class="sh-sggo"><button class="sh-btn" data-act="sg-open" data-id="' + room + '">写一份新剧本</button>' +
+      (room === 'st' ? '<button class="sh-btn" data-act="cs-open" data-id="st">✍ 自己写</button>' : '');   // 10-18：录音室也能录自己写的
     var cur = allScripts()[typeof sel === 'number' ? sel : -1];
-    if (cur && cur.source === '生成' && SG_MINE.indexOf(cur) >= 0) h += '<button class="sh-link" data-act="sg-del" data-id="' + esc(scriptId(cur)) + '">把选中的这份从「我写的」里拿掉</button>';
+    if (cur && SG_MINE.indexOf(cur) >= 0) h += '<button class="sh-link" data-act="sg-del" data-id="' + esc(scriptId(cur)) + '">把选中的这份从「我写的」里拿掉</button>';
     h += '</div><div class="sh-sgroups">';
     scriptGroups().forEach(function (g) {
       if (g.key !== 'mine' && !g.items.length) return;
-      h += '<div class="sh-sgrp" data-sg-group="' + g.key + '"><div class="sh-sgl">' + esc(g.label) + (g.key === 'mine' ? '<small>生成的，这个聊天里最多留 ' + SG_CAP + ' 份</small>' : '') + '</div>';
-      if (!g.items.length) h += '<div class="sh-sgempty">还没有。点上面「写一份新剧本」。</div>';
+      h += '<div class="sh-sgrp" data-sg-group="' + g.key + '"><div class="sh-sgl">' + esc(g.label) + (g.key === 'mine' ? '<small>生成的和自己写的，这个聊天里一共最多留 ' + SG_CAP + ' 份</small>' : '') + '</div>';
+      if (!g.items.length) h += '<div class="sh-sgempty">还没有。点上面「写一份新剧本」' + (room === 'st' ? '或「✍ 自己写」' : '') + '。</div>';
       else h += '<div class="sh-chips">' + g.items.map(function (x) {
         var ok = canRecord(p, x.s), on = sel === x.i && (ok || room === 'rh'), t = x.s.tier || TIER_ORDER[0];
         return '<button class="sh-chip' + (on ? ' on' : '') + (ok ? '' : ' lock') + '" ' + attr + '="' + x.i + '"' + (ok ? '' : ' disabled title="' + esc(refuseLine(p)) + '"') + '>' +
@@ -6005,6 +6118,13 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
   // 点击分发：处理了返回 true（主分发里第一行调它）
   function sgAct(act, t, id) {
     if (act === 'sg-open') { sgOpen(id === 'rh' ? 'rh' : 'st'); return true; }
+    if (act === 'cs-open') { csOpen(id === 'rh' ? 'rh' : 'st'); return true; }
+    if (act === 'voice-sel') { voiceSel(id, t.getAttribute('data-f')); return true; }
+    if (act === 'voice-open') { stopAudio(); UI.modal = { kind: 'voices', tid: id }; render(); return true; }
+    if (act === 'voice-try') { voiceTry(id, t.getAttribute('data-f')); return true; }
+    if (act === 'voice-learn') { voiceLearn(id, t.getAttribute('data-f')); return true; }
+    if (act === 'voice-forget') { voiceForget(id, t.getAttribute('data-f')); return true; }
+    if (act === 'cs-save') { csSave(); return true; }
     if (act === 'sg-tier') { if (UI.modal && UI.modal.kind === 'scriptgen' && UI.modal.stage !== 'busy') { UI.modal.want = id || null; sgDraw(); } return true; }
     if (act === 'sg-draw') { sgDraw(); return true; }
     if (act === 'sg-go' || act === 'sg-again') { if (UI.modal && UI.modal.kind === 'scriptgen' && UI.modal.stage !== 'busy') { UI.modal.stage = 'pick'; sgRun(act === 'sg-again'); } return true; }
@@ -6055,7 +6175,104 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
       '<button class="sh-btn pri" data-act="sg-go"' + (busy ? ' disabled' : '') + '>' + (m.stage === 'error' ? '再试一次' : '就写这个') + '</button></div></div></div>';
     return h;
   }
-  try { window.__shachoSG = { open: sgOpen, draw: sgDraw, run: sgRun, use: sgUse, del: sgDel, gen: genScript, loadServerLibrary: loadServerLibrary }; } catch (e) {}
+  // ── ✍ 自己写（10-18）：标题 + 档位 + 正文 → parseCustomScript → 存进「我写的」并选上。从排练室点进来的带着她那边写的字 ──
+  function csOpen(room) {
+    var st = readState(), p = sgPerson(room, st);
+    if (!p) { toast('warning', '旗下还没有艺人'); return; }
+    var text = room === 'rh' ? String((UI.rh.mode === 'paste' ? UI.rh.paste : UI.rh.custom) || '') : '';
+    if (room === 'rh' && !text.trim()) { toast('warning', '先在框里写几句，再存成剧本'); return; }
+    stopAudio();
+    UI.modal = { kind: 'customscript', room: room, tid: p.id, title: '', tier: TIER_ORDER.indexOf(p.tier) >= 0 ? p.tier : TIER_ORDER[0], text: text, err: '' };
+    render();
+    var ti = PANEL.querySelector('#sh-cs-title'); if (ti) ti.focus();
+  }
+  async function csSave() {
+    var m = UI.modal; if (!m || m.kind !== 'customscript' || m.busy) return;
+    var tEl = PANEL.querySelector('#sh-cs-title'), rEl = PANEL.querySelector('#sh-cs-tier'), xEl = PANEL.querySelector('#sh-cs-text');
+    if (tEl) m.title = tEl.value; if (rEl) m.tier = rEl.value; if (xEl) m.text = xEl.value;
+    var r = parseCustomScript(m.text, m.title, m.tier);
+    if (!r.ok) { m.err = r.err; render(); return; }
+    m.busy = true;
+    await save(function (s) { addMyScript(s, r.script); });
+    readState();
+    sgSelect('st', r.script.id);
+    if (m.room === 'rh') sgSelect('rh', r.script.id);   // 排练室接着念存好的这份（排练记录挂在剧本上，录音室从她念过的那遍开始录）
+    if (UI.modal === m) UI.modal = null;
+    render();
+    var p = readState().roster.find(function (x) { return x.id === m.tid; });
+    toast('success', '存好了《' + r.script.title + '》（' + r.voice + ' 句），在「我写的」里' + (p && !canRecord(p, r.script) ? '；超出' + (p.stageName || p.realName) + '的尺度，换个人录' : '，录音室能录'));
+  }
+  function renderCustomScriptModal(st) {
+    var m = UI.modal, p = st.roster.find(function (r) { return r.id === m.tid; }), nm = p ? (p.stageName || p.realName) : '';
+    var over = p && tierIdx(m.tier) > tierIdx(p.tier);
+    return '<div class="sh-modal"><div class="sh-dialog sh-sgdlg sh-csdlg"><h3>自己写剧本</h3>' +
+      '<p>存进「我写的」，排练室和录音室都能挑。</p>' +
+      '<div class="sh-label">标题</div><input id="sh-cs-title" data-cs-input="title" maxlength="' + CS_TITLE + '" autocomplete="off" placeholder="20 字以内" value="' + esc(m.title) + '">' +
+      '<div class="sh-label">档位' + (p ? '<small>' + esc(nm) + '的尺度到 ' + esc(p.tier) + '</small>' : '') + '</div>' +
+      '<select id="sh-cs-tier" data-cs-input="tier">' + TIER_ORDER.map(function (t) { return '<option value="' + esc(t) + '"' + (t === m.tier ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('') + '</select>' +
+      (over ? '<div class="sh-sghint">这一档超出' + esc(nm) + '的尺度：能存，但她录不了。</div>' : '') +
+      '<div class="sh-label">剧本</div><textarea id="sh-cs-text" data-cs-input="text" rows="10" maxlength="' + CS_MAX_CHARS + '" placeholder="一行一句她念的话">' + esc(m.text) + '</textarea>' +
+      '<div class="sh-sghint">一行一句；提示写在行首，如 [轻声] [耳语] [贴近] [笑] [喘]；圆括号里的字不念（翻译、动作说明放括号里）；[音效:xx] [停2] 也认。最多 ' + CS_MAX_VOICE + ' 句。</div>' +
+      '<div class="err">' + esc(m.err || '') + '</div>' +
+      '<div class="row"><button class="sh-btn" data-act="modal-cancel">算了</button><button class="sh-btn pri" data-act="cs-save"' + (m.busy ? ' disabled' : '') + '>存进剧本库</button></div></div></div>';
+  }
+  // ── 声线（10-18）：旗下艺人卡 / 录音室 / 排练室共用一排小 chip；点哪个，她之后就用哪个（存在她身上的 voiceSel）──
+  //   where = 'tl'（旗下艺人卡，总是显示）/ 'st' / 'rh'（只会本音时不显示）
+  function voiceChips(p, where) {
+    var vs = voicesOf(p), sel = voiceSelOf(p);
+    if (where !== 'tl' && vs.length < 2) return '';
+    return '<div class="sh-chips sh-vchips" data-vwhere="' + where + '">' + vs.map(function (v) {
+      return '<button class="sh-chip sm' + (v.fishId === sel ? ' on' : '') + '" data-act="voice-sel" data-id="' + esc(p.id) + '" data-f="' + esc(v.fishId) + '" title="' + esc(v.label) + '">' + esc(voiceName(v)) + '</button>';
+    }).join('') + '</div>';
+  }
+  async function voiceSel(tid, f) {
+    var r0 = readState().roster.find(function (r) { return r.id === tid; }); if (!r0 || !voicesOf(r0).some(function (v) { return v.fishId === f; })) return;
+    if (voiceSelOf(r0) === f) return;
+    stopAudio();
+    await save(function (s) { var r = s.roster.find(function (x) { return x.id === tid; }); if (!r) return; if (r.voice && r.voice.fishId === f) delete r.voiceSel; else r.voiceSel = f; });
+    render();
+  }
+  function voiceTryText(p) {
+    var line = ((L.scripts || [])[0] || {}).lines || [];
+    return '我是' + (p.stageName || p.realName || '') + '。' + fillTpl(line[0] || '今天也请多指教。', p);
+  }
+  function voiceTry(tid, f) {
+    var p = readState().roster.find(function (r) { return r.id === tid; }); if (!p || !f) return;
+    playSample('vt:' + tid + ':' + f, voiceTryText(p), f);
+  }
+  async function voiceLearn(tid, f) {
+    var got = null, nm = '';
+    await save(function (s) { var r = s.roster.find(function (x) { return x.id === tid; }); if (!r) return; nm = r.stageName || r.realName; got = learnVoice(r, f); });
+    render();
+    if (got) toast('success', nm + ' 练出了新声线：' + got.label);
+    else toast('warning', '练不了：最多再练 ' + VOICE_EXTRA + ' 种声线');
+  }
+  async function voiceForget(tid, f) {
+    var ok = false, v = null;
+    await save(function (s) { var r = s.roster.find(function (x) { return x.id === tid; }); if (!r) return; v = voiceOf(r, f); ok = forgetVoice(r, f); });
+    stopAudio(); render();
+    if (ok) toast('info', '不用「' + (v && v.label) + '」这个声线了');
+  }
+  function renderVoiceModal(st) {
+    var m = UI.modal, p = st.roster.find(function (r) { return r.id === m.tid; });
+    if (!p) return '';
+    var nm = p.stageName || p.realName, vs = voicesOf(p), sel = voiceSelOf(p), more = learnableVoices(p), full = (p.voices || []).length >= VOICE_EXTRA;
+    var tryBtn = function (f) { var id = 'vt:' + p.id + ':' + f, on = AUD.curId === id; return '<button class="sh-play' + (on ? ' on' : '') + '" data-act="voice-try" data-id="' + esc(p.id) + '" data-f="' + esc(f) + '"' + (AUD.busy[id] ? ' disabled' : '') + ' aria-label="试听">' + (AUD.busy[id] ? '…' : on ? '■' : '▶') + '</button>'; };
+    var h = '<div class="sh-modal"><div class="sh-dialog sh-vdlg"><h3>' + esc(nm) + '的声线</h3>' +
+      '<p>同一个人，练出另一种声线来念。本音一直在；最多再练 ' + VOICE_EXTRA + ' 种，现在不花钱。点哪个，录音和排练就用哪个。</p>' +
+      '<div class="sh-label">已经会的</div><div class="sh-vlist">' + vs.map(function (v) {
+        return '<div class="sh-vit' + (v.fishId === sel ? ' on' : '') + '">' + tryBtn(v.fishId) + '<div class="tx"><b>' + esc(voiceName(v)) + '</b>' + (v.base ? '<span>' + esc(v.label) + '</span>' : '') + '</div>' +
+          (v.base ? '' : '<button class="sh-link" data-act="voice-forget" data-id="' + esc(p.id) + '" data-f="' + esc(v.fishId) + '">不练了</button>') + '</div>';
+      }).join('') + '</div>';
+    h += '<div class="sh-label">还能练的' + (full ? '<small>练满了，先「不练了」一种</small>' : '') + '</div>';
+    if (!more.length) h += '<div class="sh-sgempty">都练会了。</div>';
+    else h += '<div class="sh-vlist">' + more.map(function (v) {
+      return '<div class="sh-vit">' + tryBtn(v.fishId) + '<div class="tx"><b>' + esc(v.label) + '</b></div>' +
+        '<button class="sh-btn sm" data-act="voice-learn" data-id="' + esc(p.id) + '" data-f="' + esc(v.fishId) + '"' + (full ? ' disabled' : '') + '>练这个</button></div>';
+    }).join('') + '</div>';
+    return h + '<div class="row"><button class="sh-btn" data-act="modal-cancel">关上</button></div></div></div>';
+  }
+  try { window.__shachoSG = { open: sgOpen, draw: sgDraw, run: sgRun, use: sgUse, del: sgDel, gen: genScript, loadServerLibrary: loadServerLibrary, csOpen: csOpen, csSave: csSave }; } catch (e) {}
 
 
   // ═══ 💬 S. 页（核心的解析 / 验证 / 办事在上面「💬 S.」那段）═══
@@ -6207,6 +6424,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     var scroll = 0; var mainOld = PANEL.querySelector('.sh-main'); if (mainOld) scroll = mainOld.scrollTop;
     var dlgOld = PANEL.querySelector('.sh-dialog'), dlgScroll = dlgOld ? dlgOld.scrollTop : 0;   // 弹层里点选（理财挑产品）重渲染时不跳回顶
     var edOld = PANEL.querySelector('#sh-rl-edit'), edFocus = edOld && edOld.ownerDocument.activeElement === edOld ? [edOld.selectionStart, edOld.selectionEnd] : null;   // 改这句时别处重渲染（播放、录完别的句子）不丢光标
+    var csOld = PANEL.ownerDocument.activeElement, csFocus = csOld && /^sh-cs-/.test(csOld.id || '') && PANEL.contains(csOld) ? [csOld.id, csOld.selectionStart, csOld.selectionEnd, csOld.scrollTop] : null;   // 自己写的弹层：同上
     // 还没填营业执照（新聊天、v0.2 的老存档）→ 整个面板先是那张表，页签都先不给
     var setup = !st.agency;
     PANEL.classList.toggle('setup', setup);
@@ -6221,6 +6439,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     var mainNew = PANEL.querySelector('.sh-main'); if (mainNew) mainNew.scrollTop = scroll;
     var dlgNew = PANEL.querySelector('.sh-dialog'); if (dlgNew && dlgOld) dlgNew.scrollTop = dlgScroll;
     var edNew = edFocus && PANEL.querySelector('#sh-rl-edit'); if (edNew) { edNew.focus(); try { edNew.setSelectionRange(edFocus[0], edFocus[1]); } catch (e) {} }
+    if (csFocus) { var csNew = PANEL.querySelector('#' + csFocus[0]); if (csNew) { csNew.focus(); try { csNew.setSelectionRange(csFocus[1], csFocus[2]); csNew.scrollTop = csFocus[3]; } catch (e) {} } }
     if (UI.tab === 'schat' && mainNew && UI.sc.stick) { UI.sc.stick = false; mainNew.scrollTop = mainNew.scrollHeight; }   // S. 回话了：滚到底
   }
 
@@ -6251,6 +6470,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     if (t && t.hasAttribute && t.hasAttribute('data-rh-input')) UI.rh[t.getAttribute('data-rh-input')] = t.value;
     if (t && t.hasAttribute && t.hasAttribute('data-wl-amt')) { UI.wl.amt = t.value; UI.wl.err = ''; }
     if (t && t.hasAttribute && t.hasAttribute('data-sc-input')) UI.sc.draft = t.value;
+    if (t && t.hasAttribute && t.hasAttribute('data-cs-input') && UI.modal && UI.modal.kind === 'customscript') UI.modal[t.getAttribute('data-cs-input')] = t.value;   // 自己写：打字不重渲染
     if (t && t.hasAttribute && t.hasAttribute('data-rl-edit') && UI.st.edit) UI.st.edit.draft = t.value;   // 打字不重渲染
     if (t && t.hasAttribute && t.hasAttribute('data-tts-spd')) { var sv = PANEL.querySelector('#sh-spd-v'); if (sv) sv.textContent = spdText(t.value); }
   });
@@ -6345,7 +6565,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     else if (act === 'play-take') {
       var stT = readState(), tk = null, owner = null;
       stT.roster.forEach(function (r) { takesOf(stT, r.id).forEach(function (x) { if (x.id === id) { tk = x; owner = r; } }); });
-      if (tk) playSample(tk.id, tk.read, owner.voice && owner.voice.fishId);
+      if (tk) playSample(tk.id, tk.read, tk.fishId || (owner.voice && owner.voice.fishId));
     }
     else if (act === 'play') {
       var who = findPerson(id);
