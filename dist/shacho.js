@@ -2568,6 +2568,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
       '- 中文台词。每行：编号 + 至多一个提示 + 她念的字，≤30 字。\n' +
       '- 提示：[轻声][耳语][贴近][笑][哭腔][冷][急][喘][停N]' + (hasSfx ? '[音效:钥匙]；音效各用一次' : '') + '；[停N]' + (hasSfx ? '和音效' : '') + '独占一行。\n' +
       '- 听众叫 {称呼}，他没有台词：他的话由她复述成问句再接（「……你说不冷？」），动作和反应都由她说出来。\n';
+    if (sl.tic) u += '- 口癖是点缀，整段最多出现两次，别句句挂在句尾。\n';
     if (ti >= 1) u += '- 喘息写成要念的字（嗯……哈啊……），独占一行，标 [喘]。\n';
     if (r18) u += '- 部位、动作、她的反应都写具体直白。\n';
     u += '- 全员成年。只输出这一段，从 === 开始。';
@@ -5231,7 +5232,8 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
       '<div class="sh-hint">' + esc(p.realName) + ' · ' + esc(p.skill && p.skill.label) + ' · 接受尺度 ' + tierTag(p.tier) + '</div></div>';
     var locked = all.filter(function (x) { return !canRecord(p, x); });
     left += '<div class="sh-box"><div class="sh-label">② 剧本（她的尺度以内的才能录）</div>' + scriptPicker(p, 'st');
-    if (locked.length) left += '<div class="sh-refuse">🔒 ' + locked.length + ' 份超出她的尺度<br>' + esc(p.stageName || p.realName) + '：「' + esc(refuseLine(p)) + '」</div>';
+    // 10-18 玩家报告：原来写「N 份超出她的尺度」+ 她拒绝的话，紧挨着下面选中的剧本，读起来像她在拒绝这一份。改成说清楚是「另外几份，没列出来」
+    if (locked.length) left += '<div class="sh-refuse">🔒 另外还有 ' + locked.length + ' 份（' + esc(locked.map(function (x) { return x.tier; }).filter(function (x, i, a) { return a.indexOf(x) === i; }).join('、')) + '）超出她的尺度，没列在上面。<br>要是拿去问她：「' + esc(refuseLine(p)) + '」</div>';
     var src = recSource(st, p, s);
     left += scriptMeta(s);
     left += '<div class="sh-lines">' + src.lines.map(function (l) { return '<div' + (lineSpeaks(l) ? '' : ' class="mute"') + '>' + cueHtml(l) + '</div>'; }).join('') + '</div>' +
