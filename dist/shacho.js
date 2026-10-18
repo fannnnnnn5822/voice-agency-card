@@ -1850,7 +1850,11 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     '#shacho-panel .mk-l .who{font-size:12px;color:var(--sh-faint);display:block;}#shacho-panel .mk-l p{margin:2px 0 0;}#shacho-panel .mk-l.fine b,#shacho-panel .mk-l.fine p{color:var(--sh-accent);}',
     '#shacho-panel .mk-up input[type=number]{font-size:18px;}',
     '#shacho-panel .mk-confirm{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;color:var(--sh-sub);margin-top:12px;line-height:1.6;cursor:pointer;}',
-    '#shacho-panel .mk-confirm input{width:20px!important;min-height:20px!important;height:20px;flex:none;margin-top:2px;}',
+    // 10-18 玩家报告：勾上了也看不出来（酒馆主题把勾选框刷成浅色空框）→ 自己画：深色边框，勾上 = 红底白勾
+    '#shacho-panel .mk-confirm input{-webkit-appearance:none!important;appearance:none!important;width:22px!important;min-width:22px!important;min-height:22px!important;height:22px!important;flex:none;margin:1px 0 0!important;padding:0!important;border:2px solid var(--sh-ink)!important;border-radius:5px!important;background:var(--sh-card) center/16px 16px no-repeat!important;cursor:pointer;box-shadow:none!important;opacity:1!important;}',
+    '#shacho-panel .mk-confirm input:checked{background-color:var(--sh-accent)!important;border-color:var(--sh-accent)!important;background-image:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Cpath d=%27M3 8.5l3.2 3L13 4.5%27 fill=%27none%27 stroke=%27white%27 stroke-width=%272.4%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E")!important;}',
+    '#shacho-panel .mk-confirm input:disabled{opacity:.5!important;cursor:default;}',
+    '#shacho-panel .mk-confirm:has(input:checked){color:var(--sh-ink);}',
     // 上架前裁剪：波形 + 三根滑块（开始 / 结束 / 试听从）
     '#shacho-panel .mk-trim{margin-top:14px;padding:12px;border:1px solid var(--sh-line);border-radius:12px;background:var(--sh-paper);}',
     '#shacho-panel .mk-tr-wait{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-size:13.5px;color:var(--sh-sub);line-height:1.6;}',
