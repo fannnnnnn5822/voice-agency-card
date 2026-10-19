@@ -2405,24 +2405,39 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     if (c.facts && c.facts.length) a.push('事实：' + c.facts.join('；'));
     return a;
   }
+  var GEN_SYS_TAIL = '格子之间不讲逻辑是故意的：真人身上本来就装着彼此打架的东西，你的活是找到底色，让它们同时成立。';
+  var GEN_SIX = '名|她的名字（只写名，姓已经定了）\n反差|……\n死结|越……越……\n提醒|……\n自我介绍|……\n试音|……\n';
+  var GEN_RULES = '写法：\n' +
+    '- 先在心里想清楚：底色怎么让主色调和点缀同时成立。说不通的地方，就是她的死结。\n' +
+    '- 反差：从上面已有的一个习惯动作出发，动作保留，只换它的结局。一句话，写成能拍出三秒画面的动作。\n' +
+    '- 死结：一句"越……越……"，对谁都成立，不只围着社长转。\n' +
+    '- 提醒：一句话，写给以后演她的人：上面哪一格最容易被演成套路，演的时候往哪个具体动作上落。\n' +
+    '- 自我介绍：两三句，她自己的口吻，带上她说话的收尾习惯和对社长的称呼。\n' +
+    '- 试音：她用自己的方式念那三句稿子，三句之间用「／」隔开；念完可以自己加一句即兴，也用「／」接在最后。这一行会直接拿去合成语音，只写她嘴里出来的字，动作和神态放进反差那一格；需要语气时在句子开头加一个方括号提示，从这几个里选：[轻声] [耳语] [笑] [哭腔] [冷] [急] [喘]。\n' +
+    '- 每项都短，写动作和具体的东西，少用形容词。';
+  function scriptBlock(script) { return script.lines.map(function (l, i) { return (i + 1) + '. ' + l; }).join('\n'); }
   function buildPrompt(c, script) {
-    var sys = '你在帮一家小配音事务所生成一位来面试的新人。代码已经随机抽好了她的档案格子；你看着这些格子，把剩下几格补出来。格子之间不讲逻辑是故意的：真人身上本来就装着彼此打架的东西，你的活是找到底色，让它们同时成立。';
+    var sys = '你在帮一家小配音事务所生成一位来面试的新人。代码已经随机抽好了她的档案格子；你看着这些格子，把剩下几格补出来。' + GEN_SYS_TAIL;
     var user = '【抽到的档案】\n' + profileLines(c).join('\n') + '\n\n' +
-      '【试音稿】\n' + script.lines.map(function (l, i) { return (i + 1) + '. ' + l; }).join('\n') + '\n\n' +
-      '【请按这个格式回，一共六行，每行一项，行首写项目名，用竖线隔开】\n' +
-      '名|她的名字（只写名，姓已经定了）\n' +
-      '反差|……\n死结|越……越……\n提醒|……\n自我介绍|……\n试音|……\n\n' +
-      '写法：\n' +
-      '- 先在心里想清楚：底色怎么让主色调和点缀同时成立。说不通的地方，就是她的死结。\n' +
-      '- 反差：从上面已有的一个习惯动作出发，动作保留，只换它的结局。一句话，写成能拍出三秒画面的动作。\n' +
-      '- 死结：一句"越……越……"，对谁都成立，不只围着社长转。\n' +
-      '- 提醒：一句话，写给以后演她的人：上面哪一格最容易被演成套路，演的时候往哪个具体动作上落。\n' +
-      '- 自我介绍：两三句，她自己的口吻，带上她说话的收尾习惯和对社长的称呼。\n' +
-      '- 试音：她用自己的方式念那三句稿子，三句之间用「／」隔开；念完可以自己加一句即兴，也用「／」接在最后。这一行会直接拿去合成语音，只写她嘴里出来的字，动作和神态放进反差那一格；需要语气时在句子开头加一个方括号提示，从这几个里选：[轻声] [耳语] [笑] [哭腔] [冷] [急] [喘]。\n' +
-      '- 每项都短，写动作和具体的东西，少用形容词。只输出这六行。';
+      '【试音稿】\n' + scriptBlock(script) + '\n\n' +
+      '【请按这个格式回，一共六行，每行一项，行首写项目名，用竖线隔开】\n' + GEN_SIX + '\n' +
+      GEN_RULES + '只输出这六行。';
+    return { sys: sys, user: user };
+  }
+  // 10-19 Fan：「面试你发三条干嘛，发一条让 llm 写三个」→ 一批人一条请求。每位一段，段首单独一行【1】【2】【3】
+  function buildBatchPrompt(cs, script) {
+    var n = cs.length;
+    var sys = '你在帮一家小配音事务所生成 ' + n + ' 位来面试的新人。代码已经给每一位随机抽好了档案格子；你看着这些格子，把每一位剩下的几格补出来。' + GEN_SYS_TAIL +
+      n + ' 个人放在一起写，正好把她们拉开：名字、说话的节奏、试音的念法，各走各的。';
+    var user = cs.map(function (c, i) { return '【第 ' + (i + 1) + ' 位抽到的档案】\n' + profileLines(c).join('\n'); }).join('\n\n') + '\n\n' +
+      '【试音稿】（' + n + ' 位念同一份）\n' + scriptBlock(script) + '\n\n' +
+      '【请按这个格式回：每位一段，段首单独一行写她的序号【1】【2】……，下面六行，每行一项，行首写项目名，用竖线隔开】\n' +
+      '【1】\n' + GEN_SIX + '\n【2】\n名|……\n（同样六行）\n\n' +
+      GEN_RULES + '只输出这 ' + n + ' 段。';
     return { sys: sys, user: user };
   }
   var RETRY_NOTE = '\n\n（上一次的格式没对上。这次请只输出六行，分别以 名| 反差| 死结| 提醒| 自我介绍| 试音| 开头。）';
+  var RETRY_NOTE_BATCH = '\n\n（上一次的格式没对上。这次每位一段：段首单独一行写序号【1】【2】……，下面六行分别以 名| 反差| 死结| 提醒| 自我介绍| 试音| 开头。）';
 
   // ── 解析：容错 markdown 粗体、序号、全角竖线/冒号、续行 ──
   var KEYMAP = { '名': 'name', '名字': 'name', '姓名': 'name', '反差': 'contrast', '死结': 'knot', '提醒': 'guard', '自我介绍': 'intro', '试音': 'demo' };
@@ -2452,6 +2467,35 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     var missing = FULL_KEYS.filter(function (k) { return !out[k]; }).map(function (k) { return KEY_ZH[k]; });
     var coreOk = CORE_KEYS.every(function (k) { return !!out[k]; });
     return { ok: missing.length === 0, coreOk: coreOk, missing: missing, data: out };
+  }
+  // 一条回复切成 n 段：认段头【1】/【第1位】/[1]/第1位/单独一行的 1.（容错 ** 和 #）；一个段头都没有就每遇到「名|」切一刀
+  var CN_NUM = { '一': 1, '二': 2, '三': 3, '四': 4, '五': 5 };
+  function batchHead(l) {
+    var m = l.match(/^[【\[]\s*(?:第\s*)?([1-9一二三四五])\s*位?[^】\]]{0,8}[】\]]\s*(.*)$/) || l.match(/^第\s*([1-9一二三四五])\s*位\s*[:：·\-—]?\s*(.*)$/) || l.match(/^([1-9])\s*[.、)）:：]?\s*$/);
+    return m ? { k: CN_NUM[m[1]] || Number(m[1]), rest: (m[2] || '').trim() } : null;
+  }
+  function splitBatch(raw, n) {
+    var text = String(raw || '').replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/```[a-z]*\n?/gi, '');
+    var rows = text.split(/\r?\n/), by = {}, cur = null, heads = false, out = [], k;
+    rows.forEach(function (row) {
+      var h = batchHead(row.replace(/\*\*/g, '').replace(/^\s*#+\s*/, '').trim());
+      if (h && h.k >= 1 && h.k <= n) { heads = true; cur = by[h.k] = by[h.k] || []; if (h.rest) cur.push(h.rest); return; }
+      if (cur) cur.push(row);
+    });
+    if (heads) { for (k = 1; k <= n; k++) out.push((by[k] || []).join('\n')); return out; }
+    var seg = null;
+    rows.forEach(function (row) {
+      var l = row.replace(/\*\*/g, '').replace(/^\s*(?:[-*•>]|\d+[.、)）])\s*/, '').trim();
+      if (/^(名字?|姓名)\s*[|｜:：]/.test(l)) { seg = []; out.push(seg); }
+      if (seg) seg.push(row);
+    });
+    out = out.map(function (s) { return s.join('\n'); });
+    while (out.length < n) out.push('');
+    return out.slice(0, n);
+  }
+  function parseBatch(raw, cs) {
+    var parts = splitBatch(raw, cs.length);
+    return cs.map(function (c, i) { return parseReply(parts[i], c.surname); });
   }
 
   // ── 排练室：她念一遍剧本。档案只给演戏用得上的几格，省 token ──
@@ -3751,7 +3795,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     syncTalentEntries: syncTalentEntries, storyOnly: storyOnly, stripShMemo: stripShMemo, memoMerge: memoMerge, memoSignLine: memoSignLine, SHMEMO_RE: SHMEMO_RE, NEWS_CAP: NEWS_CAP, TALENT_TAG: TALENT_TAG,
     drawOne: drawOne, drawBatch: drawBatch, allAgesReasonsOf: allAgesReasonsOf, computeFee: computeFee, feeText: feeText,
     pickPortrait: pickPortrait, fillPortraits: fillPortraits, portraitUrl: portraitUrl, portraitOk: portraitOk, PORTRAIT_N: PORTRAIT_N, PORTRAIT_BASE: PORTRAIT_BASE,
-    buildPrompt: buildPrompt, parseReply: parseReply, nameKey: nameKey, randInt: randInt, profileLines: profileLines,
+    buildPrompt: buildPrompt, parseReply: parseReply, buildBatchPrompt: buildBatchPrompt, splitBatch: splitBatch, parseBatch: parseBatch, nameKey: nameKey, randInt: randInt, profileLines: profileLines,
     buildTakePrompt: buildTakePrompt, parseTake: parseTake, drawInvites: drawInvites, talentFits: talentFits,
     dateOf: dateOf, dayOfDate: dayOfDate, mdText: mdText, fillTpl: fillTpl, owlOpen: owlOpen,
     moneyText: moneyText, moneyShort: moneyShort, monthlyBill: monthlyBill, crossesMonth: crossesMonth, addLedger: addLedger,
@@ -4247,23 +4291,58 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     }
     return t;
   }
-  async function genOne(c, script) {
+  function genAsk(p, note, gid) {
+    return genRaw({
+      user_input: p.user + (note || ''),
+      should_silence: true, max_chat_history: 0,
+      ordered_prompts: [{ role: 'system', content: SANDBOX_FICTION }, { role: 'system', content: p.sys }],
+      generation_id: gid,
+    }).then(rawText);
+  }
+  function is429(e) { return /429|too many/i.test((e && e.message) || String(e)); }
+  // 单独一位（卡片上的「再试一次」，或整批被拦后拆开补）：tries 次，最后一次只要名字、自我介绍、试音齐了就收
+  async function genOne(c, script, tries) {
     var p = buildPrompt(c, script), lastErr = null;
-    for (var attempt = 0; attempt < 2; attempt++) {
+    tries = tries || 2;
+    for (var attempt = 0; attempt < tries; attempt++) {
       var raw;
-      try {
-        raw = rawText(await genRaw({
-          user_input: p.user + (attempt ? RETRY_NOTE : ''),
-          should_silence: true, max_chat_history: 0,
-          ordered_prompts: [{ role: 'system', content: SANDBOX_FICTION }, { role: 'system', content: p.sys }],
-          generation_id: 'shacho-' + c.id + '-' + attempt,
-        }));
-      } catch (e) { lastErr = e; continue; }
+      try { raw = await genAsk(p, attempt ? RETRY_NOTE : '', 'shacho-' + c.id + '-' + attempt); }
+      catch (e) { lastErr = e; if (is429(e)) break; continue; }   // 限流了马上再打一次也是 429
       var r = parseReply(raw, c.surname);
-      if (r.ok || (attempt === 1 && r.coreOk)) return r.data;   // 第二次只要名字、自我介绍、试音齐了就收
-      lastErr = new Error('回复格式没对上（缺：' + r.missing.join('、') + '）');
+      if (r.ok || (attempt === tries - 1 && r.coreOk)) return r.data;
+      lastErr = new Error(r.missing.length === FULL_KEYS.length && sgFailKind(raw) !== 'format' ? sgFailText(sgFailKind(raw)) : '回复格式没对上（缺：' + r.missing.join('、') + '）');
     }
     throw lastErr || new Error('没生成出来');
+  }
+  // 一批人一条请求（10-19 Fan）。一次点：通常 1 条；有人格式没对上，第 2 条只补她们；
+  // 第 1 条整条没写（被拦 / 空回复 / 出错）多半是某一位的格子被拦，一起再发还是拦 → 拆开每人一条、各只打一次（最多 1+3 条）；429 马上停
+  async function genBatch(cs, script) {
+    var pend = cs.slice(), why = '';
+    for (var attempt = 0; attempt < 2 && pend.length; attempt++) {
+      var p = pend.length === 1 ? buildPrompt(pend[0], script) : buildBatchPrompt(pend, script), raw = null, err = null;
+      try { raw = await genAsk(p, attempt ? (pend.length === 1 ? RETRY_NOTE : RETRY_NOTE_BATCH) : '', 'shacho-batch-' + pend[0].id + '-' + attempt); }
+      catch (e) { err = e; }
+      if (err && is429(err)) { why = '请求太多被限流了（429），等一会儿再点'; break; }
+      var rs = err ? [] : pend.length === 1 ? [parseReply(raw, pend[0].surname)] : parseBatch(raw, pend);
+      var next = [];
+      pend.forEach(function (c, i) {
+        var r = rs[i];
+        if (r && (r.ok || (attempt === 1 && r.coreOk))) fillCand(c, r.data);
+        else { next.push(c); c.err = r && r.missing.length < FULL_KEYS.length ? '回复格式没对上（缺：' + r.missing.join('、') + '）' : ''; }
+      });
+      why = err ? ((err && err.message) || String(err)) : next.length === pend.length && sgFailKind(raw) !== 'format' ? sgFailText(sgFailKind(raw)) : '';
+      if (attempt === 0 && next.length > 1 && next.length === pend.length && (err || sgFailKind(raw) !== 'format')) {
+        render();
+        await Promise.all(next.map(async function (c) {
+          try { fillCand(c, await genOne(c, script, 1)); }
+          catch (e) { c.status = 'error'; c.err = (e && e.message) || String(e); }
+          render();
+        }));
+        return;
+      }
+      pend = next;
+    }
+    pend.forEach(function (c) { c.status = 'error'; c.err = c.err || why || '没生成出来'; });
   }
   function fillCand(c, data) {
     c.given = data.name;
@@ -4290,7 +4369,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     CUR = { script: script, cands: drawBatch(3, rosterSurnames, st.roster.map(function (r) { return r.portrait; })), at: Date.now() };
     CUR.cands.forEach(function (c) { c.status = 'loading'; });
     UI.busy = true; render();
-    await Promise.all(CUR.cands.map(runGen));   // 三个人同时生成
+    await genBatch(CUR.cands, CUR.script);   // 三个人一条请求
     UI.busy = false; render();
     await persistAudition();
     var bad = CUR.cands.filter(function (c) { return c.status === 'error'; }).length;
