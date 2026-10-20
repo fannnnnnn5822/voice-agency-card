@@ -2726,7 +2726,7 @@ var SHACHO_DD = (function () {
     var quiet = cs.filter(function (c) { return c.id !== 'S' && !(d.h[c.id] || []).length; });
     var pend = Object.keys(d.q || {}).filter(function (k) { return d.q[k] > 0; });
     var h = '<div class="dd-top"><div class="dd-logo">盯</div><h2>盯盯<small>' + esc(C.agencyName(s) || '事务所') + ' · 工作台</small></h2><span class="dd-clock">' + esc(C.mdShort(s.day) + ' ' + clock(s)) + '</span></div><div class="dd-list">';
-    if (pend.length) h += '<button class="dd-flush" data-x="flush"><span>📨 ' + pend.length + ' 个会话攒了消息没发</span><b>' + (generating ? '发送中…' : '一起发 ➤') + '</b></button>';
+    if (pend.length) h += '<button class="dd-flush" data-x="flush"><span>📨 ' + pend.length + ' 个会话攒了消息没发（私聊合成一次请求）</span><b>' + (generating ? '发送中…' : '一起发 ➤') + '</b></button>';
     h += itemHtml(cs[0], s, true);
     h += groups(s).map(function (g) { return itemHtml(Object.assign({ group: true }, g), s); }).join('');
     if (talk.length) h += '<div class="dd-sec">最近</div>' + talk.map(function (c) { return itemHtml(c, s); }).join('');
@@ -2844,17 +2844,83 @@ var SHACHO_DD = (function () {
     await flushAll(id, true);   // 只发这一个会话：别的会话攒着的不替社长发（一条一次额度）；要全发，首页有「一起发」
   }
   // 一键统一发：攒了消息的会话按顺序各发各的（当前这个先发），每个会话一条请求
+  // 「一起发」（照纸醉金迷）：攒了消息的私聊合成一条请求，模型分人各写各的；群和 S. 各发各的
   async function flushAll(first, only) {
     if (generating) return;
     var d = dd(), chats = Object.keys(d.q || {}).filter(function (k) { return d.q[k] > 0; });
     if (first) chats = only ? [first] : [first].concat(chats.filter(function (x) { return x !== first; }));
-    for (var i = 0; i < chats.length; i++) {
-      var id = chats[i];
-      await C.save(function (s) { s.dd.q[id] = 0; }); if (viewing(id)) syncSendBtn(id);
-      var stop = await reply(id);
-      if (stop === '429') break;
+    if (!chats.length) return;
+    await C.save(function (s) { chats.forEach(function (id) { s.dd.q[id] = 0; }); });
+    chats.forEach(function (id) { if (viewing(id)) syncSendBtn(id); });
+    var s = st(), solo = [], priv = [];
+    chats.forEach(function (id) { var c = findChat(id, s); if (!c) return; (c.group || c.kind === 'S' ? solo : priv).push(id); });
+    if (priv.length >= 2) { if (await replyBatch(priv, false) === '429') return done(); } else solo = priv.concat(solo);
+    for (var i = 0; i < solo.length; i++) { if (await reply(solo[i]) === '429') break; }
+    done();
+    function done() { if (view.screen === 'home' && rootLive()) renderHome(); }
+  }
+  // 几个私聊一条请求：每人一段，段首【名字】；没写到的人补一次（只剩一个就单发，几个就再合一条）
+  async function replyBatch(ids, retried) {
+    var s = st(), cs = ids.map(function (id) { return findChat(id, s); }).filter(Boolean);
+    if (!cs.length) return '';
+    setBusy(true);
+    var ctx = await mainContext(), t = stamp(s), raw = '', err = '';
+    try {
+      raw = C.rawText(await C.genRaw({
+        user_input: '请按要求输出' + cs.map(function (c) { return c.name; }).join('、') + '各自的新消息。', should_silence: true, max_chat_history: 0,
+        ordered_prompts: [{ role: 'system', content: C.SANDBOX_FICTION }, { role: 'system', content: await batchPrompt(cs, ctx, s) }],
+        generation_id: 'shacho-ddb-' + Date.now().toString(36),
+      }));
+    } catch (e) { err = (e && e.message) || String(e); }
+    setBusy(false);
+    if (/429|too many/i.test(err)) { C.toast('warning', '请求太多被限流了（429），等一会儿再发'); return '429'; }
+    var got = splitBatch(cleanAI(raw), cs, t), miss = [];
+    for (var i = 0; i < cs.length; i++) {
+      var res = got[cs[i].id] || [];
+      if (res.length) await applyReply(cs[i].id, cs[i], res); else miss.push(cs[i].id);
     }
-    if (view.screen === 'home' && rootLive()) renderHome();
+    if (miss.length && !got._none) { try { console.warn('[盯盯] 一起发漏了：', miss, '原文：', raw); } catch (e) {} }
+    if (!miss.length) return '';
+    if (retried) { C.toast('warning', miss.map(function (id) { var c = findChat(id); return c ? c.name : id; }).join('、') + ' 暂时没回' + (err ? '：' + err : '，再发一次试试')); return ''; }
+    if (miss.length === 1) return reply(miss[0]);
+    return replyBatch(miss, true);
+  }
+  function splitBatch(txt, cs, t) {
+    var out = {}, cur = null, names = {};
+    cs.forEach(function (c) { names[c.name] = c; if (c.ref) { if (c.ref.realName) names[c.ref.realName] = c; if (c.ref.stageName) names[c.ref.stageName] = c; } });
+    txt.split('\n').forEach(function (l) {
+      var line = l.replace(/\*\*/g, '').trim(); if (!line) return;
+      var h = line.match(/^(?:#+\s*)?[【\[〔]\s*([^】\]〕]{1,12})\s*[】\]〕]\s*[:：]?$/) || line.match(/^(?:#+\s*)?([^\s：:|｜【】\[\]]{1,8})\s*[:：]$/) || line.match(/^#+\s*(.{1,12})$/);
+      if (h && names[h[1].trim()]) { cur = names[h[1].trim()]; out[cur.id] = out[cur.id] || []; return; }
+      if (!cur) {   // 没写段首、写成「名字：消息」的也认
+        var k = line.search(/[:：]/), nm = k > 0 ? line.slice(0, k).trim() : '';
+        if (nm && names[nm]) { var c0 = names[nm]; var m0 = parseNpcLine(line.slice(k + 1).trim(), c0, c0.name, t); if (m0) (out[c0.id] = out[c0.id] || []).push(m0); }
+        return;
+      }
+      if (out[cur.id].length >= 6) return;
+      var body = line.replace(new RegExp('^\\s*' + escRe(cur.name) + '\\s*[:：]\\s*'), '').replace(/^\s*[-•·]\s*/, '').trim();
+      if (!body || /^(社长|老板|User|\{\{user\}\})\s*[:：]/i.test(body)) return;
+      var m = parseNpcLine(body, cur, cur.name, t); if (m) out[cur.id].push(m);
+    });
+    if (!Object.keys(out).length) out._none = true;
+    return out;
+  }
+  async function batchPrompt(cs, ctx, s) {
+    var parts = [];
+    for (var i = 0; i < cs.length; i++) {
+      var c = cs[i], persona = await personaOf(c, s);
+      parts.push('════ ' + c.name + ' ════\n【人物档案】\n' + persona + '\n\n' + knowRules(c.name) + '\n【' + c.name + '和社长的盯盯聊天记录】\n' + (histText(hist(c.id, s), 80) || '（还没聊过）'));
+    }
+    return '你在演成人向职场喜剧《声色事务所》里的几个人：社长刚在「盯盯」上分别给她们发了消息，现在她们各自回社长。盯盯是' + (C.agencyName(s) || '事务所') + '大家用的工作聊天软件，装在各自手机上：工作在上面谈，私事也在上面聊。所有人都是成年人。\n' +
+      '这几段是各自的私聊，互相看不到；每个人只接自己和社长的那段对话。\n\n' +
+      '【现在】' + C.recentLine(s) + '｜现在是 ' + C.mdText(s.day) + ' ' + clock(s) + '\n\n' +
+      (ctx ? '【最近的正文】（社长当面经历的事；每个人只知道自己在场的部分）\n' + ctx + '\n\n' : '') +
+      parts.join('\n\n') + '\n\n' +
+      '【输出规则】\n' +
+      '- 每个人一段，段首单独一行写【名字】，名字按这个顺序：' + cs.map(function (c) { return '【' + c.name + '】'; }).join('') + '；每个人都要回。\n' +
+      '- 每段 1～4 条消息，每条一行，只写消息内容；每条 35 字以内，像真人打字，接着社长发给她的话往下说。\n' + RICH +
+      '- 每一行就是她打出来的字：动作、心理、时间戳都留在外面。\n' +
+      '直接输出。';
   }
   // 对方回：S. 走社长室原来那套（能替社长办事）；群一次请求多人回；其余一人一次请求，一次能回好几条
   async function reply(id) {
@@ -2872,6 +2938,11 @@ var SHACHO_DD = (function () {
       if (viewing(id)) renderMessages(id);
       return is429 ? '429' : '';
     }
+    await applyReply(id, c, res);
+    return '';
+  }
+  // 回来的消息落档 + 刷新屏幕 / 注入 / 誊进正文（单发和一起发共用）
+  async function applyReply(id, c, res) {
     var seen = viewing(id);
     await C.save(function (s2) {
       res.forEach(function (m) {
@@ -3363,7 +3434,7 @@ var SHACHO_DD = (function () {
     init: init, attach: attach, cleanup: cleanup, onChatChanged: onChatChanged, refreshInjection: refreshInjection,
     pushInvite: pushInvite, markOldInvites: markOldInvites, addContact: addContact, norm: norm, unread: unreadTotal,
     stripLog: stripLog, DDLOG_RE: DDLOG_RE, contacts: contacts, injText: injText,
-    _t: { parsePrivate: parsePrivate, parseGroup: parseGroup, parseNpcLine: parseNpcLine, parseCallText: parseCallText, inviteChatId: inviteChatId, resolveSticker: resolveSticker, privatePrompt: privatePrompt, groupPrompt: groupPrompt, groups: groups, findChat: findChat, view: function () { return view; } },
+    _t: { splitBatch: splitBatch, batchPrompt: batchPrompt, parsePrivate: parsePrivate, parseGroup: parseGroup, parseNpcLine: parseNpcLine, parseCallText: parseCallText, inviteChatId: inviteChatId, resolveSticker: resolveSticker, privatePrompt: privatePrompt, groupPrompt: groupPrompt, groups: groups, findChat: findChat, view: function () { return view; } },
   };
 })();
 
