@@ -136,6 +136,67 @@ var SHACHO_LISTS = {
     '万凯': '隔壁事务所老板。嘴里只有最高级，自封天才，张口给人起外号，数据随口编到小数点，上一句吹自己，下一句跳到鞋、上帝或者昨晚的梦。总想高价挖人。',
   },
 
+  // ── 性癖（10-20 Fan：从一掷千金的癖好库搬来，人物才立体）：按她接受的尺度抽，全年龄不抽 ──
+  //   R15 抽 1 条软的；R18 常见XP 抽 2 条（至少 1 条是这一档的）；BDSM、深渊各抽这一档 1 条 + 下面几档 1 条
+  //   写「对方」不写「你」：跟谁、走多远归玩家定。⚠️ 别写「绑 / 拘束 / 调教」这几个字：面试那条请求在输入端会被关键词拦（10-19 实测）
+  kinks: {
+    'R15': [
+      '纯爱型：要亲吻、要对视、要抱紧，被当成一次交易她就关机',
+      '恋声：听对方说话就有反应，打电话时在那头喘',
+      '被夸就软：一句「你真棒」比什么都管用',
+      '标记欲：要身上留着对方的痕迹，第二天故意穿低领',
+      '极度敏感：碰哪儿都有反应，浑身都是开关',
+      '慢速控：按住对方的腰说「慢一点」，要对视，要叫她的名字',
+      '耳朵是弱点：凑到她耳边说话她就站不稳，ASMR 录多了反噬',
+    ],
+    'R18 常见XP': [
+      '深喉：咽下去以后张嘴给对方看，「干净了」',
+      '骑乘控：她自己来，把对方按住不让动，节奏归她',
+      '角色扮演：护士、女仆、秘书，台词她提前写好了',
+      '差一点被看到：落地窗不拉帘、录音棚玻璃后面',
+      '恋物：丝袜、高跟鞋、旗袍，对方喜欢什么她就穿什么',
+      '淫语：全程不闭嘴，还要对方也说，说不出口她就停下来看着笑',
+      '潮吹体质：到那一下会失控，捂着脸说「你别看」',
+      '痴女：不等对方开口，手比嘴快，从头到尾没让对方主导过',
+      '榨干型：一次不够，第二次她骑上来自己动，看对方腿抖才满意',
+      '逆推：进门先把对方按在墙上，力气没对方大，对方就是翻不过来',
+      '「射进来」：自己扶着坐下去，箍紧对方的腰不让退',
+      '小恶魔：「就这？」越看轻对方越来劲，等对方忍不住动手那一下',
+      '对着麦克风做：要把自己的声音录下来，事后一遍遍回放',
+    ],
+    'R18 BDSM': [
+      '交出控制：让对方用领带系住她的手腕、蒙上她的眼睛，信任比领带贵',
+      'Brat：越顶嘴越来劲，等对方来管她',
+      '女王：让对方跪着，把东西亲手放进她手里，说「谢谢」',
+      '寸止控：对方快到了就停手，来回三四次，等对方开口求她',
+      '言语支配：在对方耳边一句一句说，要对方红着脸承认',
+      '项圈：戴上项圈才肯叫主人，摘下来立刻翻脸不认',
+      '疼才算数：掐她、打她屁股，越疼叫得越好听',
+      '命令：要对方下指令，一个口令一个动作，做错了自己报数',
+    ],
+    '深渊': [
+      '催眠：要对方数到三再叫她醒，醒来不记得刚才叫过对方什么',
+      '当宠物养：要对方给她起个宠物名，用碗喝水，趴着等人摸头',
+      '改记忆游戏：要对方每次见面都说「你本来就是我的」，说多了她就信了',
+      '一百遍：同一句话要对方在她耳边念一百遍，念到她只剩这一句',
+      '人偶：全程一动不动，任对方摆弄，眼睛都不眨',
+    ],
+  },
+
+  // ── 圈里的来客：赴约时写进正文注入的一句话介绍（世界书【声优圈的生态】是常驻的，这里只给赴约那一场补个底）──
+  visitors: {
+    '小陈': '平台的审音员，男，重度鼻炎，兜里永远揣两卷卫生纸。管作品上架和首页推荐位，带着最新的审核红线来卡排期，也拿榜单位置换事务所的独家首发。',
+    '宋岚': '正规圈大厂的制片，女，穿高定西装，嫌棚里有股石楠花味，随身带便携空气净化器；重度耳鸣，得靠戚监督调的那段底噪才听得清人话。手里攥着乙游、广播剧的外包单来塞救命钱，顺手物色社长旗下的好苗子签独家合约带走。',
+    '林厌': '事务所的御用台本写手，笔名「纯爱战神」，在楼下便利店上夜班的瘦姑娘，穿着店里的围裙来交本子。闲聊三句就结巴，一聊到拟声词就两眼放光、逻辑严密；常拖稿，常跟戚监督吵「到底够不够硬」。',
+    '老郑': '这栋写字楼的物业经理，五十岁，保温杯泡枸杞，听不懂什么是 ASMR，坚信这屋里在搞跳大神或者无证推拿。隔壁是专打离婚官司的律所，隔着一层石膏板。',
+    '蒙面的配音演员': '正规圈混不下去的配音演员，戴口罩墨镜、用假名来接 R18 私活，要现结，死活不签长约，怕被原来的剧组听出来；嘴上端着「我拿过奖」，被戚监督骂几回以后比谁都卖力。名字和来历由正文起。',
+    '扒皮号': '论坛上专做声纹对比的扒皮号，躲在网线后面，用私信谈价钱，要封口费。来谈的可能是本人，也可能是派来的中间人，由正文定。',
+  },
+
+  // ── 正文回一条，掷一次骰子（10-20，照纸醉金迷的陌生人私信）：日历上冒出一条今天的新邀约 ──
+  //   chance：每条正文回复掷中的概率；gap：两次之间至少隔几条回复；maxPending：今天还没回的约到这么多条就先不加
+  pings: { chance: 0.3, gap: 3, maxPending: 3 },
+
   // ── 日历：每天的邀约模板。代码每天抽 1~3 条，纯代码，不花 token ──
   //   by：'talent' = 旗下艺人发来的；其余是工作人员的名字（要和上面 staff 的键一致）
   //   need（只对 talent 有用）：new 签约三天内 / low 业务 1~2 星 / rich 家里有钱 / shy 非常害羞 / abyss 深渊档
@@ -175,6 +236,18 @@ var SHACHO_LISTS = {
     // 旗下一个人都没有的时候（10-18）
     { by: '戚监督', need: 'empty', text: '戚监督：棚空着也是烧钱，今天我教你听干音。来控制室。', where: '录音棚的控制室', what: '旗下还没有艺人，戚监督拉社长去控制室，教社长听干音' },
     { by: '周阿姨', need: 'empty', pay: 'extraGig', text: '周阿姨：旗下一个艺人都没有，工资倒是月月照发。隔壁剧组缺个跑龙套的，一天{龙套费}块，你去，抵账。', where: '隔壁剧组的片场', what: '旗下没人，周阿姨押着社长去隔壁剧组跑龙套抵债，龙套费她已经替社长收了' },
+    // 圈里的来客（10-20，世界书【声优圈的生态】里那几位）：每天的随机池和正文回复后的掷骰都会抽到；赴约时带 visitors 里那段介绍
+    { by: '小陈', visitor: true, text: '小鸮：老板，平台的审音员小陈来了，兜里揣着两卷卫生纸，说上周那部有一句要当面跟你改。', where: '会客室', what: '平台审音员小陈带着审核红线上门，要改一句台词，顺便拿首页推荐位换独家首发' },
+    { by: '宋岚', visitor: true, ahead: 1, text: '宋岚：一单群杂，五万，周结。明天下午我过来，空气净化器我自己带。', where: '会客室', what: '大厂制片宋岚带着一单群杂外包来谈，顺便看看社长旗下的人' },
+    { by: '林厌', visitor: true, text: '林厌：社、社长……新本子写完了，就是有点长。我下了夜班过来，能、能先预支八百吗？', where: '社长室', what: '台本师林厌来交新本子，想预支稿费' },
+    { by: '老郑', visitor: true, text: '物业老郑：社长，隔壁律所又投诉了。下午我上来查一下消防栓，顺便说说电费。', where: '录音棚门口', what: '物业老郑上门讨电费，顺便来听隔音' },
+    { by: '蒙面的配音演员', visitor: true, text: '小鸮：老板，楼下来了个戴口罩墨镜的女人，用变声器跟我说话，说想录一单现结的，不签约。', where: '会客室', what: '一位正规圈的配音演员戴着口罩来接私活，要现结，不签约' },
+    { by: '妮姐', visitor: true, text: '妮姐：有位老板要下私人定制，带的现金，人已经在会客室坐着了。宝贝，口味有点怪，你来定接不接。', where: '会客室', what: '妮姐领来一位下私人定制单的金主，带着现金，口味很怪，等社长定接不接' },
+    { by: '扒皮号', visitor: true, withTalent: true, text: '小鸮：老板，论坛上有个声纹扒皮号发了{艺名}的对比图，说她在正规圈还有个马甲。对方留了私信，要谈谈。', where: '社长室', what: '声纹扒皮号扒了{艺名}的马甲，找上门要封口费' },
+    // 接着刚才那场（10-20）：正文刚演完和某位艺人 / 面试者的戏，掷骰掷中时一半机会是她接着约（只在掷骰里抽，不进每天的随机池）
+    { by: 'talent', follow: true, text: '{艺名}：{称呼}，刚才没说完的那件事……今晚能再找你聊聊吗？', where: '事务所楼下的便利店', what: '刚才见过面的她还有话没说完，约社长晚上再聊' },
+    { by: 'talent', follow: true, ahead: 1, text: '{艺名}发来一条三秒的语音，只有一声叹气。后面跟着一句：明天还能来找你吗', where: '社长室', what: '她想明天再来找社长一次' },
+    { by: 'talent', follow: true, text: '{艺名}：我回去把你刚才说的那句又练了几遍，想念给你听。', where: '排练室', what: '她把社长刚才说的话练了，想当面念给社长听' },
     // 小鸮清账（10-18）：鸽子攒够了强制发，赴约或接受就算清了
     { by: '小鸮', special: 'owl', text: '小鸮把一叠便签拍在桌上：老板，你已经放了大家{鸽子}次鸽子哦。今晚锁门，一条条回完再走～', where: '社长室', what: '小鸮把社长没回的邀约一条条摆出来，锁了门，让社长当场回完' },
   ],
@@ -327,6 +400,9 @@ var SHACHO_LISTS = {
       wealthEnd: '「{产品}」到期：本金 {本}，{盈亏}。',
       wealthRedeem: '「{产品}」提前赎回，手续费 {费}。',
       monthToast: '周阿姨：{月}月的账结了。房租、水电、工资一共 {出}，账上还剩 {余}。',
+      rentToast: 'S.：15 号了，房租、水电、我的电费我已经替你交了，一共 {出}。账上还剩 {余}。……不用谢，反正你也算不明白。',
+      payToast: '周阿姨：今天 25 号，发工资。工资单在社长室桌上，你签了字我才发得出去。',
+      payDoneToast: '周阿姨：{月}月工资发了，一共 {出}，账上还剩 {余}。',
       broke: '再不录黄油就要卖人了！',
     },
   },
@@ -2321,7 +2397,19 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     c.familyRich = isRich(fam);
     c.skill.rank = Math.max(1, Math.min(5, Number(c.skill.rank) || 1));
     c.fee = computeFee(c.skill.rank, c.tier);
+    c.kinks = drawKinks(c.tier);
     return c;
+  }
+  // 性癖：按尺度抽（清单和规矩在 lists.js 的 kinks）。全年龄 / 清单缺档 → 空
+  function drawKinks(tier) {
+    var K = L.kinks || {}, order = ['R15', 'R18 常见XP', 'R18 BDSM', '深渊'], at = order.indexOf(tier);
+    if (at < 0 || !(K[tier] || []).length) return [];
+    var own = K[tier], below = [];
+    order.slice(0, at + (tier === 'R15' ? 0 : 1)).forEach(function (t) { if (t !== tier || tier === 'R18 常见XP') below = below.concat(K[t] || []); });
+    var first = pick(own);
+    if (tier === 'R15') return [first];
+    var rest = below.filter(function (x) { return x !== first; });
+    return rest.length ? [first, pick(rest)] : [first];
   }
   function drawBatch(n, rosterSurnames, usedPortraits) {
     var out = [], hard = [], voices = [], faces = (usedPortraits || []).slice();
@@ -2403,6 +2491,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
       '怎么称呼社长：' + c.callYou + '；什么时候改口：' + c.switchCond,
     ]);
     if (c.facts && c.facts.length) a.push('事实：' + c.facts.join('；'));
+    if (c.kinks && c.kinks.length) a.push('性癖：' + c.kinks.join('；'));
     return a;
   }
   var GEN_SYS_TAIL = '格子之间不讲逻辑是故意的：真人身上本来就装着彼此打架的东西，你的活是找到底色，让它们同时成立。';
@@ -2600,7 +2689,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     }
     var talentT = [], staffT = [];
     tpls.forEach(function (t, i) {
-      if (t.special) return;
+      if (t.special || t.follow) return;
       if (t.by === 'talent') { talentT.push(i); return; }
       if (t.need === 'empty') { if (!roster.length) { staffT.push(i); staffT.push(i); } return; }   // 空名单时才抽，抽中的机会翻倍
       if (!t.withTalent || roster.length) staffT.push(i);
@@ -2623,17 +2712,53 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
       var key = ti + '@' + ev + '@' + (r ? r.id : '');
       if (usedKey[key]) continue;
       usedWho[who] = 1; usedKey[key] = 1; if (t.vs) usedWho[t.vs] = 1;
-      var inv = {
-        id: 'v' + Date.now().toString(36) + rndU32().toString(36), key: key, tpl: ti,
-        recvDay: day, day: ev, by: t.by === 'talent' ? (r.stageName || r.realName) : t.by,
-        kind: t.by === 'talent' ? 'talent' : 'staff', talentId: r ? r.id : null,
-        text: fillTpl(t.text, r), where: fillTpl(t.where, r), what: fillTpl(t.what, r), status: 'pending',
-      };
-      if (t.vs) inv.vs = t.vs;
-      if (t.pay) inv.pay = Number(E[t.pay]) || 0;
-      out.push(inv);
+      out.push(buildInv(t, ti, r, day, ev, key));
     }
     return out;
+  }
+  function buildInv(t, ti, r, day, ev, key) {
+    var inv = {
+      id: 'v' + Date.now().toString(36) + rndU32().toString(36), key: key, tpl: ti,
+      recvDay: day, day: ev, by: t.by === 'talent' ? (r.stageName || r.realName) : t.by,
+      kind: t.by === 'talent' ? 'talent' : 'staff', talentId: r ? r.id : null,
+      text: fillTpl(t.text, r), where: fillTpl(t.where, r), what: fillTpl(t.what, r), status: 'pending',
+    };
+    if (t.vs) inv.vs = t.vs;
+    if (t.pay) inv.pay = Number(E[t.pay]) || 0;
+    if (t.visitor) inv.visitor = true;
+    return inv;
+  }
+  // 正文回一条后掷中了：抽一条新邀约（纯代码，不花 token）。focus = 刚才那场戏的主角（旗下艺人或面谈过的面试者），一半机会是她接着约
+  //   existing 里同一天同一件事不重复；抽不到返回 null
+  function drawPing(day, roster, existing, focus) {
+    roster = roster || [];
+    var tpls = L.invites || [], usedKey = {};
+    (existing || []).forEach(function (v) { if (v.key) usedKey[v.key] = 1; });
+    var tryOne = function (ti, r) {
+      var t = tpls[ti]; if (!t) return null;
+      var ev = inviteDay(t, day), key = ti + '@' + ev + '@' + (r ? r.id : '');
+      if (usedKey[key]) return null;
+      var inv = buildInv(t, ti, r, day, ev, key); inv.ping = true;
+      return inv;
+    };
+    var follow = [], pool = [];
+    tpls.forEach(function (t, i) {
+      if (t.special || t.need) return;
+      if (t.follow) { follow.push(i); return; }
+      if (t.by === 'talent') { if (roster.length) pool.push(i); return; }
+      if (t.withTalent && !roster.length) return;
+      pool.push(i); if (t.visitor) pool.push(i);   // 圈里的来客机会翻倍：正文闲下来时，外面的人找上门
+    });
+    var shy = function (x) { return (x.facts || []).indexOf(SHY_FACT) >= 0; };   // 害羞的那位只发她那一句，掷骰不替她约
+    if (focus && !shy(focus) && follow.length && rndFloat() < 0.5) {
+      for (var k = 0; k < 6; k++) { var a = tryOne(pick(follow), focus); if (a) return a; }
+    }
+    for (var n = 0; n < 30 && pool.length; n++) {
+      var ti = pick(pool), t = tpls[ti], r = null;
+      if (t.by === 'talent' || t.withTalent) { var fits = roster.filter(function (x) { return !shy(x); }); if (!fits.length) continue; r = pick(fits); }
+      var b = tryOne(ti, r); if (b) return b;
+    }
+    return null;
   }
 
   // ═══ 钱（数字全在 lists.js 的 economy）═══
@@ -2655,8 +2780,9 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
   function talentMonthly(r) { return Number((E.talentMonthly || [])[rankOf(r)]) || 0; }
   function signingFee(r) { return Number((E.signingFee || [])[rankOf(r)]) || 0; }
   // 月底账单：day = 这个月的最后一天（游戏第几天）。当月才签的人按天折算
-  function monthlyBill(roster, day) {
-    var d = dateOf(day), first = dayOfDate(new Date(d.getFullYear(), d.getMonth(), 1)), dim = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  //   period：这一期算几天（25 号发工资 = 1 号到 25 号，干满 25 天就是全月工资）；不传 = 整个月
+  function monthlyBill(roster, day, period) {
+    var d = dateOf(day), first = dayOfDate(new Date(d.getFullYear(), d.getMonth(), 1)), dim = Number(period) || new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
     var items = [];
     if (E.rent) items.push({ kind: 'rent', amount: -E.rent, note: noteOf('rent') });
     if (E.utilities) items.push({ kind: 'utilities', amount: -E.utilities, note: noteOf('utilities') });
@@ -2674,6 +2800,39 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     return { items: items, total: total, month: d.getMonth() + 1 };
   }
   function crossesMonth(day) { return dateOf(day).getMonth() !== dateOf(day + 1).getMonth(); }
+  // 10-20 Fan：每月 15 号交房租水电（S. 自动交），25 号发工资（社长签字）
+  var RENT_DAY = 15, PAY_DAY = 25;
+  function rentBill(day) { return billPart(monthlyBill([], day), { rent: 1, utilities: 1, sElectric: 1 }); }
+  function payrollBill(roster, day) { return billPart(monthlyBill(roster, day, dateOf(day).getDate()), { staff: 1, talent: 1 }); }
+  function billPart(b, kinds) {
+    var items = b.items.filter(function (x) { return kinds[x.kind]; });
+    return { items: items, total: items.reduce(function (a, x) { return a + x.amount; }, 0), month: b.month };
+  }
+  // 正文末尾 [TIME:HH:MM|M/D] → 第几天（纯函数，核心里测得到）
+  var TIME_RE = /\[TIME:\s*(\d{1,2}:\d{2})\s*(?:\|\s*(\d{1,2})\s*[\/月.-]\s*(\d{1,2})\s*日?)?\s*\]/;
+  var TIME_RE_ALL = /\n?[ \t]*\[TIME:[^\]\n]*\]/g;
+  var TIME_MAX_JUMP = 7;
+  function dayFromMD(month, date, nearDay) {
+    var y0 = dateOf(nearDay).getFullYear(), best = null;
+    [y0 - 1, y0, y0 + 1].forEach(function (y) {
+      var d = dayOfDate(new Date(y, month - 1, date));
+      if (best == null || Math.abs(d - nearDay) < Math.abs(best - nearDay)) best = d;
+    });
+    return best;
+  }
+  function timeTarget(text, today) {
+    var m = String(text || '').match(TIME_RE);
+    if (!m) return null;
+    var out = { clock: m[1], day: today };
+    if (m[2] && m[3]) out.day = dayFromMD(Number(m[2]), Number(m[3]), today);
+    return out;
+  }
+  // 从 day 起（含当天）下一个「每月 dom 号」是第几天
+  function nextDom(day, dom) {
+    var d = dateOf(day), t = new Date(d.getFullYear(), d.getMonth(), dom);
+    if (dayOfDate(t) < day) t = new Date(d.getFullYear(), d.getMonth() + 1, dom);
+    return dayOfDate(t);
+  }
   // 记一笔（s = 存档；save 回调里用）
   function addLedger(s, kind, amount, note, extra) {
     amount = Math.round(Number(amount) || 0);
@@ -3433,25 +3592,36 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     var hs = wealthHeldSum(st); if (hs) s += '·理财压着' + moneyText(hs);
     var ro = st.roster || [];
     s += '·旗下：' + (ro.length ? ro.map(talentLabel).join('、') : '还没有艺人');
+    // 10-20：今天日历上等着社长的约 + 月底快到了（正文里的人能顺着提，小鸮能来催）
+    var pend = (st.invites || []).filter(function (v) { return v && Number(v.day) === Number(st.day) && (v.status === 'pending' || v.status === 'accepted'); });
+    if (pend.length) s += '｜今天等着社长的：' + pend.slice(-3).map(function (v) { return v.by + (v.status === 'accepted' ? '（社长答应了）' : '') + '：' + v.what + '（' + v.where + '）'; }).join('；');
+    if (st.payroll && !st.payroll.signed) s += '｜' + mdText(st.payroll.day) + '的工资单还等着社长签字（周阿姨在催）';
+    else { var dp = nextDom(st.day, PAY_DAY) - st.day, dr = nextDom(st.day, RENT_DAY) - st.day;
+      if (dp > 0 && dp <= 2) s += '｜离' + PAY_DAY + '号发工资还有' + dp + '天';
+      if (dr > 0 && dr <= 2) s += '｜离' + RENT_DAY + '号交房租还有' + dr + '天'; }
     var ev = (news || st.news || []).slice(-NEWS_CAP).map(function (e) { return e && e.t; }).filter(Boolean);
     if (ev.length) s += '｜刚才：' + ev.join('；');
     return s;
   }
+  function daysToMonthEnd(day) { var d = dateOf(day); return dayOfDate(new Date(d.getFullYear(), d.getMonth() + 1, 0)) - (Number(day) || 1); }
 
   // ── 聊天世界书里的艺人条目：extra.shacho_tid = 艺人 id 认自己的条目，别的条目一概不碰 ──
-  var TALENT_TAG = 'shacho_tid', TALENT_LEFT = 'shacho_left', TALENT_CAP = 250;
-  function talentComment(r) { return '【艺人】' + (r.stageName || r.realName || ''); }
+  // 10-20：请进正文聊过、还没签的面试者也有一条（【面试者】），签了就原地变成【艺人】（同一个 id）
+  var TALENT_TAG = 'shacho_tid', TALENT_LEFT = 'shacho_left';
+  function talentComment(r) { return r.stageName ? '【艺人】' + r.stageName : '【面试者】' + (r.realName || ''); }
   function talentKeys(r) {
     var a = [r.stageName, r.realName, (r.given && Array.from(String(r.given)).length >= 2) ? r.given : ''];
     var out = [];
     a.forEach(function (k) { k = String(k || '').trim(); if (k && out.indexOf(k) < 0) out.push(k); });
     return out;
   }
-  // 档案：必有的几格先放，后面的按顺序塞，塞到 TALENT_CAP 字为止
+  // 档案整段给（10-20 Fan：面试过的人要让正文、插件和总结都读到）。条目按名字触发，提到她才进提示词，不用截
   function talentContent(r) {
     var g = r.gen || {}, sk = r.skill || {};
     var must = [
-      '旗下艺人「' + (r.stageName || '') + '」，本名' + (r.realName || '') + '，' + r.age + '岁，' + r.hometown + '人，第' + (r.signedDay || 1) + '天签约，身价' + feeText(r.fee),
+      r.stageName
+        ? '旗下艺人「' + r.stageName + '」，本名' + (r.realName || '') + '，' + r.age + '岁，' + r.hometown + '人，第' + (r.signedDay || 1) + '天签约，身价' + feeText(r.fee)
+        : '来面试过的新人' + (r.realName || '') + '，' + r.age + '岁，' + r.hometown + '人，第' + (r.metDay || 1) + '天进社长室面谈过，还没签约',
       '声线：' + ((r.voice && r.voice.label) || '') + ((r.voices || []).length ? '（会好几种声线，还会：' + r.voices.map(function (v) { return v.label; }).join('、') + '）' : ''),
       '专长：' + (r.specialty || '') + '；业务' + (sk.label || '') + '(' + rankOf(r) + '/5)；尺度：' + (r.tier || ''),
       '三色：' + [r.base, r.main, r.accent].filter(Boolean).join('／'),
@@ -3459,16 +3629,20 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     var opt = [
       g.contrast ? '反差：' + g.contrast : '',
       g.knot ? '死结：' + g.knot : '',
+      g.guard ? '演她时留意：' + g.guard : '',
+      r.look ? '外貌：' + r.look : '',
+      r.item ? '随身物件：' + r.item : '',
       r.callYou ? '称呼社长：' + callShort(r.callYou) + (r.switchCond ? '；改口：' + r.switchCond : '') : '',
+      r.ending ? '说话收尾：' + r.ending : '',
       r.quirk ? '怪癖：' + r.quirk : '',
+      (r.kinks && r.kinks.length) ? '性癖：' + r.kinks.join('；') : '',
+      r.event ? '改变了她的事：' + r.event : '',
+      r.family ? '家里：' + r.family : '',
       (r.facts && r.facts.length) ? r.facts.join('；') : '',
       r.motive ? '来面试是因为' + r.motive : '',
     ].filter(Boolean);
     var trim = function (x) { return String(x).replace(/[。．.\s]+$/, ''); };
-    must = must.map(trim); opt = opt.map(trim);
-    var s = must.join('。');
-    opt.forEach(function (x) { if (Array.from(s + '。' + x).length <= TALENT_CAP) s += '。' + x; });
-    return clipText(s, TALENT_CAP + 10);
+    return must.concat(opt).map(trim).join('。');
   }
   function talentEntry(r) {
     var x = {}; x[TALENT_TAG] = r.id;
@@ -3538,7 +3712,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
   // 往一楼的原文里并入几行：返回新原文；没有新东西返回 null。原文本身一个字不动，块接在最后
   function memoMerge(txt, lines) {
     txt = String(txt == null ? '' : txt);
-    var add = (lines || []).map(function (l) { l = memoSafe(l); return l.length > 300 ? l.slice(0, 300) + '…' : l; }).filter(Boolean);
+    var add = (lines || []).map(function (l) { l = memoSafe(l); return l.length > MEMO_LINE_CAP ? l.slice(0, MEMO_LINE_CAP) + '…' : l; }).filter(Boolean);
     if (!add.length) return null;
     var re = new RegExp(SHMEMO_RE.source, 'g'), mm, last = null;
     while ((mm = re.exec(txt))) last = { start: mm.index, end: mm.index + mm[0].length };
@@ -3552,10 +3726,13 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     return txt + '\n' + SHMEMO_HEAD + SHMEMO_TITLE + '\n' + add.join('\n') + '</div>';
   }
   // 签下一个人时写进记录的那一行（比近况里那句详细：总结插件要能记住她是谁）
+  var MEMO_LINE_CAP = 1500;   // 一行的上限只防坏数据；档案整段约 400–700 字
   function memoSignLine(r, day) {
     var bits = [r.age ? r.age + '岁' : '', r.hometown ? r.hometown + '人' : '', r.voice && r.voice.label, r.tier].filter(Boolean);
     return '第' + (day || r.signedDay || '?') + '天签下' + (r.realName || '') + '（艺名' + (r.stageName || '') + (bits.length ? '，' + bits.join('，') : '') + '）';
   }
+  // 她是谁（整份档案），签约或第一次进正文面谈时各写一次（面谈过的人签约时只补签约那句）
+  function memoProfileLine(r) { return (r.stageName || r.realName || '') + '的档案：' + talentContent(r); }
 
   var EFF_DROP = ['think', 'thinking', 'cot', 'reasoning', 'details', 'status', 'statusblock', 'status_block', 'statusbar', 'status_bar',
     'options', 'option', 'choices', 'selection', 'summary', 'updatevariable'];
@@ -3792,7 +3969,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
   var CORE = {
     parseSfx: parseSfx, sfxText: sfxText,
     addNews: addNews, recentLine: recentLine, talentContent: talentContent, talentKeys: talentKeys, talentComment: talentComment, talentEntry: talentEntry,
-    syncTalentEntries: syncTalentEntries, storyOnly: storyOnly, stripShMemo: stripShMemo, memoMerge: memoMerge, memoSignLine: memoSignLine, SHMEMO_RE: SHMEMO_RE, NEWS_CAP: NEWS_CAP, TALENT_TAG: TALENT_TAG,
+    syncTalentEntries: syncTalentEntries, storyOnly: storyOnly, stripShMemo: stripShMemo, memoMerge: memoMerge, memoSignLine: memoSignLine, memoProfileLine: memoProfileLine, rentBill: rentBill, payrollBill: payrollBill, nextDom: nextDom, timeTarget: timeTarget, rollDay: rollDay, drawPing: drawPing, drawKinks: drawKinks, RENT_DAY: RENT_DAY, PAY_DAY: PAY_DAY, TIME_RE_ALL: TIME_RE_ALL, memoCollect: memoCollect, memoMarkAll: memoMarkAll, bookPeople: bookPeople, inviteText: inviteText, SHMEMO_RE: SHMEMO_RE, NEWS_CAP: NEWS_CAP, TALENT_TAG: TALENT_TAG,
     drawOne: drawOne, drawBatch: drawBatch, allAgesReasonsOf: allAgesReasonsOf, computeFee: computeFee, feeText: feeText,
     pickPortrait: pickPortrait, fillPortraits: fillPortraits, portraitUrl: portraitUrl, portraitOk: portraitOk, PORTRAIT_N: PORTRAIT_N, PORTRAIT_BASE: PORTRAIT_BASE,
     buildPrompt: buildPrompt, parseReply: parseReply, buildBatchPrompt: buildBatchPrompt, splitBatch: splitBatch, parseBatch: parseBatch, nameKey: nameKey, randInt: randInt, profileLines: profileLines,
@@ -3867,6 +4044,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     }
     if (!Array.isArray(s.works)) s.works = [];
     if (!Array.isArray(s.news)) s.news = [];   // 10-18：【社长室近况】里「刚才」的那几件事
+    if (!Array.isArray(s.met)) s.met = [];   // 10-20：请进正文聊过、还没签的面试者（档案进聊天世界书和隐形记录）
     if (!Array.isArray(s.myScripts)) s.myScripts = [];   // 10-18：游戏里现写的剧本
     if (!Array.isArray(s.sChat)) s.sChat = [];   // 10-18：和 S. 说的话
     if (!Array.isArray(s.notes)) s.notes = [];   // 10-18：S. 记在日历上的备忘
@@ -4419,7 +4597,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     var snap = JSON.parse(JSON.stringify(CUR));
     UI.modal = null;
     var fee = signingFee(entry);
-    await save(function (s) { s.roster.push(entry); s.audition = snap; if (fee) addLedger(s, 'sign', -fee, noteOf('sign', { '艺名': name }), { talentId: entry.id }); addNews(s, '签下' + entry.realName + '，艺名' + name); bankerCheck(s); });
+    await save(function (s) { s.roster.push(entry); s.met = s.met.filter(function (x) { return x && x.id !== entry.id; }); s.audition = snap; if (fee) addLedger(s, 'sign', -fee, noteOf('sign', { '艺名': name }), { talentId: entry.id }); addNews(s, '签下' + entry.realName + '，艺名' + name); bankerCheck(s); });
     render();
     toast('success', '签下了 ' + entry.realName + '，艺名「' + name + '」' + (fee ? '，签约金 ' + moneyText(fee) : ''));
   }
@@ -4461,7 +4639,11 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
   function agencyName(st) { st = st || readState(); return (st.agency && st.agency.name) || ''; }
   function agencyRef() { var n = agencyName(); return n ? '事务所「' + n + '」' : '事务所'; }
   function inviteText(p) {
-    return ['【社长室·面谈】' + (p.realName || realName(p)) + '（' + p.age + ' 岁，' + p.hometown + '人）来' + agencyRef() + '面试，现在走进了社长室。这一段正文让她当主角，社长（User）当面跟她聊；事务所的工作人员可以在门外或旁边，但这一场是她的。' + (p.stageName ? '她已经签约，艺名「' + p.stageName + '」（社长取的）。' : '她还没签约。')]
+    var nm = p.realName || realName(p);
+    var head = p.stageName
+      ? '【社长室·面谈】旗下艺人「' + p.stageName + '」（本名' + nm + '，' + p.age + ' 岁，' + p.hometown + '人，艺名是社长取的）被社长叫进了社长室。这一段正文让她当主角，社长（User）当面跟她聊；事务所的工作人员可以在门外或旁边，但这一场是她的。'
+      : '【社长室·面谈】' + nm + '（' + p.age + ' 岁，' + p.hometown + '人）来' + agencyRef() + '面试，现在走进了社长室。这一段正文让她当主角，社长（User）当面跟她聊；事务所的工作人员可以在门外或旁边，但这一场是她的。她还没签约。';
+    return [head]
       .concat(personBlock(p))
       .concat(['写这场时，让她的说话收尾习惯和对社长的称呼自然出现；档案是底子，不用逐条念出来。']).join('\n');
   }
@@ -4495,6 +4677,12 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
   }
   async function invite(p) {
     var nm = p.realName || realName(p);
+    if (!p.stageName) {   // 还没签的面试者：记进 met，档案进聊天世界书和隐形记录，下一轮正文还认得她
+      var m = JSON.parse(JSON.stringify(p));
+      delete m.status; delete m.err;
+      m.realName = nm;
+      await save(function (s) { if (!s.met.some(function (x) { return x && x.id === m.id; })) { m.metDay = s.day; s.met.push(m); } });
+    }
     await setScene('invite', nm, inviteText(p), '（请' + nm + '进社长室坐下）', nm + ' 在门口等着了，去正文跟她打个招呼吧');
   }
   function onMainReceived(mesId, type) {
@@ -4502,10 +4690,37 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     // 不挡的话 got 被提前置 true，玩家第一条消息一发就把这场撤了，正文根本没带上它
     if (type === 'first_message') return;
     newsReceived();
+    onTimeTag(mesId, type);
+    maybePing(type);
     var sc = readState().scene;
     if (!sc || sc.got) return;
     GOT_MEM = sc.at;
     save(function (s) { if (s.scene && s.scene.at === sc.at) s.scene.got = true; });
+  }
+  // ═══ 正文回一条，掷一次骰子（10-20 Fan：「做完几轮发上去以后就没有下文」；照纸醉金迷 maybeAutoStranger）═══
+  // 掷中 → 日历上冒出一条今天的新邀约（纯代码，不花 token），弹个提醒；近况里「今天等着社长的」下一轮正文就看得见
+  // 只认正常的新回复：左滑重抽 / 重新生成 / 续写不掷，开场白也不掷；事务所还没起名不掷
+  var PING_SKIP = { swipe: 1, regenerate: 1, 'continue': 1, impersonate: 1, quiet: 1, first_message: 1 };
+  function personByName(st, nm) {
+    if (!nm) return null;
+    var hit = function (x) { return x && (x.stageName === nm || x.realName === nm); };
+    return (st.roster || []).find(hit) || (st.met || []).find(hit) || null;
+  }
+  function maybePing(type) {
+    if (PING_SKIP[type]) return;
+    var st = readState(), P = L.pings || {};
+    if (!agencyName(st)) return;
+    var pend = st.invites.filter(function (v) { return v.status === 'pending' && Number(v.day) === Number(st.day); }).length;
+    var due = (Number(st.pingGap) || 0) + 1 >= (Number(P.gap) || 3) && pend < (Number(P.maxPending) || 3);
+    var inv = due && rndFloat() < (P.chance == null ? 0.3 : Number(P.chance)) ? drawPing(st.day, st.roster, st.invites, personByName(st, st.scene && st.scene.name)) : null;
+    save(function (s) {
+      if (inv) { s.invites.push(inv); s.pingGap = 0; if (s.invites.length > INV_CAP) s.invites = s.invites.slice(-INV_CAP); }
+      else s.pingGap = (Number(s.pingGap) || 0) + 1;
+    }).then(function () {
+      if (!inv) return;
+      toast('info', '📅 ' + inv.text + (inv.day > st.day ? '（约在' + mdText(inv.day) + '）' : '') + '　（社长室·日历）');
+      try { render(); } catch (e) {}
+    });
   }
   function onUserSent() {
     newsSent();
@@ -4521,12 +4736,14 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
   //   玩家发下一条（MESSAGE_SENT）→ got 的那几件清掉；先同步把新的近况挂上，再存档（生成在这之后组提示词，赶得上）
   //   回复到了以后才办的事没有 got，留到下一轮
   var RECENT_ID = 'shacho-recent';
+  // 剧情时间（10-20 Fan：正文时间和社长室对齐，照纸醉金迷的 [TIME]）：脚本读完就从楼层里擦掉，玩家看不见
+  var TIME_ASK = '这条回复写完，最后单独一行写剧情时间 [TIME:HH:MM|M/D]：这条回复结尾那一刻的时间，日期从上面那天往后接；故事过了夜，就写第二天的日期。';
   var NEWS_GOT = {}, NEWS_GONE = {};   // GONE = 已经清掉的（存档还没落账时，排在前面的存档回调重挂近况也不会把它们带回来）
   function applyRecent(st) {
     st = st || readState();
     var news = (st.news || []).filter(function (e) { return e && !NEWS_GONE[e.id]; });
     try { uninjectPrompts([RECENT_ID]); } catch (e) {}
-    try { injectPrompts([{ id: RECENT_ID, position: 'in_chat', depth: 1, role: 'system', content: recentLine(st, news), should_scan: false }]); } catch (e) {}
+    try { injectPrompts([{ id: RECENT_ID, position: 'in_chat', depth: 1, role: 'system', content: recentLine(st, news) + '\n' + TIME_ASK, should_scan: false }]); } catch (e) {}
   }
   // 隐形记录的写入：近况里每一件新事 + 新签的人（详细一行），排队写进最近的 AI 楼
   // 脚本加载 / 切聊天时，已有的事和人都当「记过了」，只记之后新发生的（防重载时重复写）
@@ -4534,11 +4751,23 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
   function memoMarkAll(st) {
     MEMO_DONE = {};
     (st.news || []).forEach(function (e) { if (e && e.id) MEMO_DONE['n:' + e.id] = 1; });
-    (st.roster || []).forEach(function (r) { if (r && r.id) MEMO_DONE['r:' + r.id] = 1; });
+    (st.roster || []).forEach(function (r) { if (r && r.id) MEMO_DONE['r:' + r.id] = MEMO_DONE['m:' + r.id] = 1; });
+    (st.met || []).forEach(function (r) { if (r && r.id) MEMO_DONE['m:' + r.id] = 1; });
   }
   function memoCollect(st) {
     var lines = [];
-    (st.roster || []).forEach(function (r) { if (r && r.id && !MEMO_DONE['r:' + r.id]) { MEMO_DONE['r:' + r.id] = 1; lines.push(memoSignLine(r)); } });
+    (st.met || []).forEach(function (r) {
+      if (!r || !r.id || MEMO_DONE['m:' + r.id]) return;
+      MEMO_DONE['m:' + r.id] = 1;
+      lines.push('第' + (r.metDay || st.day) + '天，来面试的' + (r.realName || '') + '进社长室面谈');
+      lines.push(memoProfileLine(r));
+    });
+    (st.roster || []).forEach(function (r) {
+      if (!r || !r.id || MEMO_DONE['r:' + r.id]) return;
+      MEMO_DONE['r:' + r.id] = 1;
+      lines.push(memoSignLine(r));
+      if (!MEMO_DONE['m:' + r.id]) { MEMO_DONE['m:' + r.id] = 1; lines.push(memoProfileLine(r)); }
+    });
     (st.news || []).forEach(function (e) {
       if (!e || !e.id || MEMO_DONE['n:' + e.id]) return;
       MEMO_DONE['n:' + e.id] = 1;
@@ -4617,24 +4846,29 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
   // 用聊天自己的世界书（getOrCreateChatWorldbook）：聊天已经绑了书（玩家自己的 / 别的插件的）就往里加，不替换；
   // 只认 extra.shacho_tid 的条目，别的条目原样留着。名单没变就不写（TB.sig 比对）
   var TB = { sig: null, busy: null, again: false };
+  // 进聊天世界书的人：旗下艺人 + 进正文面谈过、还没签的（签了的以名单为准）
+  function bookPeople(st) {
+    var ids = {}; (st.roster || []).forEach(function (r) { if (r && r.id) ids[r.id] = 1; });
+    return (st.roster || []).concat((st.met || []).filter(function (m) { return m && m.id && !ids[m.id]; }));
+  }
   function talentSig(roster) { return JSON.stringify((roster || []).map(function (r) { return [r.id, talentComment(r), talentContent(r), talentKeys(r)]; })); }
   function syncTalents(force) {
     if (typeof updateWorldbookWith !== 'function' || typeof getOrCreateChatWorldbook !== 'function') return Promise.resolve(false);
     if (TB.busy) { TB.again = true; return TB.busy; }
-    var st = readState(), sig = talentSig(st.roster);
+    var st = readState(), people = bookPeople(st), sig = talentSig(people);
     if (!force && sig === TB.sig) return Promise.resolve(false);
     TB.busy = (async function () {
       await null;   // 先让出一拍：不然没有 await 的那条路会在 TB.busy 赋值之前就跑完 finally，busy 永远清不掉
       try {
         var book = null;
         try { book = (typeof getChatWorldbookName === 'function') ? getChatWorldbookName('current') : null; } catch (e) {}
-        if (!book && !st.roster.length) { TB.sig = sig; return false; }   // 还没签人就不建空书
+        if (!book && !people.length) { TB.sig = sig; return false; }   // 还没人就不建空书
         if (!book) {
           var d = new Date(), p2 = function (n) { return String(n).padStart(2, '0'); };
           book = await getOrCreateChatWorldbook('current', '声色事务所·艺人档案·' + d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) + '-' + p2(d.getHours()) + p2(d.getMinutes()) + p2(d.getSeconds()));
         }
         var res = null;
-        await updateWorldbookWith(book, function (wb) { res = syncTalentEntries(wb, st.roster); return res.entries; });
+        await updateWorldbookWith(book, function (wb) { res = syncTalentEntries(wb, people); return res.entries; });
         TB.sig = sig;
         return !!(res && res.changed);
       } catch (e) {
@@ -4682,7 +4916,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
           ordered_prompts: [{ role: 'system', content: SANDBOX_FICTION }, { role: 'system', content: pr.sys }],
           generation_id: 'shacho-rh-' + p.id + '-' + Date.now().toString(36) + '-' + attempt,
         }));
-      } catch (e) { lastErr = e; continue; }
+      } catch (e) { lastErr = e; if (is429(e)) break; continue; }   // 限流了马上再打一次也是 429
       var r = parseTake(raw);
       if (r.ok || (attempt === 1 && r.data.read)) return r.data;
       lastErr = new Error('回复格式没对上');
@@ -4713,7 +4947,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
   }
   function rehearsalScene(p, sc, take, dir) {
     var nm = p.stageName || p.realName;
-    var lines = ['【社长室·排练室】' + nm + '（本名' + p.realName + '）在' + agencyRef() + '的排练室排一段剧本，社长（User）在场。戚监督和妮姐可以在：戚监督听戏、喊停，妮姐盯她的气息。这一段正文写排练现场：她照社长的指导把这段再念一遍，社长和在场的人给反应。']
+    var lines = ['【社长室·排练室】' + nm + '（本名' + p.realName + '）在' + agencyRef() + '的排练室排一段剧本，社长（User）在场。戚监督和妮姐可以在：戚监督听戏、喊停，妮姐盯她的气息。这一段正文写排练现场：' + (dir ? '她照社长的指导把这段再念一遍' : '她把这段再念一遍') + '，社长和在场的人给反应。']
       .concat(personBlock(p));
     lines.push('剧本《' + sc.title + '》：\n' + sc.text);
     if (take && take.read) lines.push('她刚才在排练室念的那一遍：' + take.read + (take.note ? '\n她自己说：' + take.note : ''));
@@ -5147,35 +5381,114 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     }).then(function () { _ensuring = null; return true; }, function () { _ensuring = null; return false; });
     return _ensuring;
   }
+  // ═══ 过日子（10-20 Fan）═══
+  //   每月 15 号：房租、水电、S. 电费、这个月的贷款自动扣，S. 发通知
+  //   每月 25 号：周阿姨拿工资单来找社长签字。工资单在社长室签，签了才扣（员工 + 旗下艺人），签之前这一天结束不了
+  //   日子两条路往前走：社长室「结束今天」，或者正文过了夜（正文末尾的 [TIME:HH:MM|M/D]，照纸醉金迷）——两条路走的是同一个 rollDay
+  function payrollDue(st) { return !!(st.payroll && !st.payroll.signed); }
+  function rollDay(s) {
+    var d = s.day, res = { from: d, rent: null, loanRes: null, matured: [], payroll: false };
+    s.invites.forEach(function (v) { if (v.status === 'pending' && v.day <= d) v.status = 'missed'; });   // 当天没回的记成「没回」；约在以后的还能回
+    s.day = d + 1;
+    res.matured = settleWealth(s).map(function (h) { return JSON.parse(JSON.stringify(h)); });   // 理财到期：第二天一早结
+    addNews(s, '结束了第' + d + '天，今天是' + mdText(s.day));
+    var dom = dateOf(s.day).getDate();
+    if (dom === RENT_DAY) {
+      var rb = rentBill(s.day);
+      rb.items.forEach(function (it) { addLedger(s, it.kind, it.amount, it.note); });
+      var lb0 = s.loan ? loanBill(s.loan) : null;
+      res.rent = rb; res.loanRes = payLoanMonth(s); res.loanAmt = lb0 ? lb0.principal + lb0.interest : 0;   // 有贷款就扣这个月的一期；扣完还是负数 = 逾期罚息
+      addNews(s, mdText(s.day) + '，S. 自动交了房租水电' + moneyText(-rb.total) + (res.loanRes ? '，还了一期贷款' + (res.loanRes.overdue ? '（逾期罚息）' : '') : ''));
+    }
+    if (dom === PAY_DAY && !(s.payroll && s.payroll.day === s.day)) {
+      s.payroll = { day: s.day, month: dateOf(s.day).getMonth() + 1, signed: false };
+      res.payroll = true;
+      addNews(s, mdText(s.day) + '发工资，周阿姨拿着工资单等社长签字');
+    }
+    res.matured.forEach(function (h) { addNews(s, '理财「' + h.name + '」到期' + (h.how === 'wipe' ? '归零' : (h.payout >= h.amount ? '赚' : '亏') + moneyText(Math.abs(h.payout - h.amount)))); });
+    return res;
+  }
+  // 过完日子以后弹的提醒（两条路共用）
+  function rollToasts(rs) {
+    rs.forEach(function (r) {
+      if (r.rent) {
+        var left = readState().money;
+        toast(left < 0 ? 'error' : 'warning', noteOf('rentToast', { '出': moneyText(-r.rent.total + (r.loanAmt || 0)), '余': moneyText(left) }) + (left < 0 ? noteOf('broke') : ''));
+        if (r.loanRes && r.loanRes.overdue && L.banker) toast('error', pick(L.banker.toasts && L.banker.toasts.length ? L.banker.toasts : L.banker.lines));
+      }
+      if (r.payroll) toast('warning', noteOf('payToast'));
+      r.matured.forEach(function (h) {
+        var diff = h.payout - h.amount;
+        toast(h.how === 'win' ? 'success' : 'error', '「' + h.name + '」到期' + (h.how === 'wipe' ? '，归零' : '，' + (diff >= 0 ? '赚了 ' : '亏了 ') + moneyText(Math.abs(diff))) + '。' + (L.banker ? L.banker.name + '：' : '') + wealthLine(h.how));
+      });
+    });
+  }
   async function endDay() {
     var st0 = readState(), d0 = st0.day;
-    // 跨月：这个月最后一天结束 → 周阿姨结账（房租、水电、员工、艺人）
-    var bill = crossesMonth(d0) ? monthlyBill(st0.roster, d0) : null, loanRes = null, matured = [];
-    await save(function (s) {
-      var d = s.day;
-      s.invites.forEach(function (v) { if (v.status === 'pending' && v.day <= d) v.status = 'missed'; });   // 当天没回的记成「没回」；约在以后的还能回
-      if (bill) {
-        bill.items.forEach(function (it) { addLedger(s, it.kind, it.amount, it.note, it.talentId ? { talentId: it.talentId } : null); });
-        loanRes = payLoanMonth(s);   // 有贷款就扣这个月的一期；扣完还是负数 = 逾期罚息
-      }
-      s.day = d + 1;
-      matured = settleWealth(s).map(function (h) { return JSON.parse(JSON.stringify(h)); });   // 理财到期：第二天一早结
-      addNews(s, '结束了第' + d + '天' + (bill ? '，' + bill.month + '月底结账扣' + moneyText(-bill.total) : '') + (loanRes ? '，还了一期贷款' + (loanRes.overdue ? '（逾期罚息）' : '') : ''));
-      matured.forEach(function (h) { addNews(s, '理财「' + h.name + '」到期' + (h.how === 'wipe' ? '归零' : (h.payout >= h.amount ? '赚' : '亏') + moneyText(Math.abs(h.payout - h.amount)))); });
-    });
+    if (payrollDue(st0)) { UI.modal = { kind: 'payroll' }; render(); return; }   // 25 号的工资单没签，这一天过不去
+    var res = null;
+    await save(function (s) { res = rollDay(s); });
     UI.calSel = null; UI.calOff = 0; UI.modal = null;
     await ensureInvites();
+    if (res && res.payroll) UI.modal = { kind: 'payroll' };   // 一进 25 号，周阿姨就把工资单拍在桌上
     render();
     toast('info', '第 ' + d0 + ' 天结束了。今天是第 ' + (d0 + 1) + ' 天（' + mdText(d0 + 1) + '）');
-    if (bill) {
-      var left = readState().money;
-      toast(left < 0 ? 'error' : 'warning', noteOf('monthToast', { '月': bill.month, '出': moneyText(-bill.total), '余': moneyText(left) }) + (left < 0 ? noteOf('broke') : ''));
-      if (loanRes && loanRes.overdue && L.banker) toast('error', pick(L.banker.toasts && L.banker.toasts.length ? L.banker.toasts : L.banker.lines));
-    }
-    matured.forEach(function (h) {
-      var diff = h.payout - h.amount;
-      toast(h.how === 'win' ? 'success' : 'error', '「' + h.name + '」到期' + (h.how === 'wipe' ? '，归零' : '，' + (diff >= 0 ? '赚了 ' : '亏了 ') + moneyText(Math.abs(diff))) + '。' + (L.banker ? L.banker.name + '：' : '') + wealthLine(h.how));
+    if (res) rollToasts([res]);
+  }
+  // 社长在工资单上签字：扣员工和旗下艺人的工资，正文演周阿姨发钱
+  async function signPayroll(sign) {
+    var st0 = readState();
+    if (!payrollDue(st0)) { UI.modal = null; render(); return; }
+    var bill = payrollBill(st0.roster, st0.payroll.day);
+    await save(function (s) {
+      if (!payrollDue(s)) return;
+      bill.items.forEach(function (it) { addLedger(s, it.kind, it.amount, it.note, it.talentId ? { talentId: it.talentId } : null); });
+      s.payroll.signed = true; s.payroll.sign = sign; s.payroll.total = bill.total;
+      addNews(s, '社长在' + s.payroll.month + '月工资单上签了字，发工资扣' + moneyText(-bill.total));
     });
+    UI.modal = null;
+    var left = readState().money;
+    toast(left < 0 ? 'error' : 'warning', noteOf('payDoneToast', { '月': st0.payroll.month, '出': moneyText(-bill.total), '余': moneyText(left) }) + (left < 0 ? noteOf('broke') : ''));
+    await setScene('payday', '周阿姨', paydayScene(bill, sign, readState()), '（把签好字的工资单交给周阿姨）', '工资单签好了，周阿姨拿着去发钱了', '财务室');
+  }
+  // 正文过了夜：正文回复末尾写 [TIME:HH:MM|M/D]，脚本照这个日期把日子往前推，再把标记从楼层里擦掉（照纸醉金迷 dm_generator ③）
+  //   只往前走，不往回拨；一次最多走 TIME_MAX_JUMP 天（模型写错月份时别一下子跳过半年）
+  function onTimeTag(mesId, type) {
+    if (type === 'first_message' || type === 'impersonate' || type === 'quiet') return;
+    _memoQ = _memoQ.then(doTime, doTime);   // 跟隐形记录排同一条队：两边都改这一楼的原文
+    async function doTime() {
+      try {
+        var id = Number(mesId); if (!(id >= 0)) id = await getLastMessageId();
+        var msgs = await getChatMessages(id); var m = msgs && msgs[0];
+        if (!m || m.role !== 'assistant' || String(m.message || '').indexOf('[TIME:') < 0) return;
+        var st = readState(), t = timeTarget(m.message, st.day);
+        await setChatMessages([{ message_id: m.message_id, message: String(m.message).replace(TIME_RE_ALL, '').replace(/\s+$/, '') }], { refresh: 'affected' });
+        if (!t) return;
+        var jump = t.day - st.day;
+        if (jump > 0 && jump <= TIME_MAX_JUMP) await storyDays(jump);
+        await save(function (s) { s.clock = t.clock; });
+      } catch (e) { try { console.warn('[社长室] 剧情时间没读到', e); } catch (e2) {} }
+    }
+  }
+  // 正文那边过了 n 天：一天一天往前推（15 号照扣，25 号照样拿工资单）。工资单没签也照样过日子，近况里周阿姨一直催
+  async function storyDays(n) {
+    var rs = [], before = readState().day;
+    await save(function (s) { for (var i = 0; i < n; i++) rs.push(rollDay(s)); });
+    await ensureInvites();
+    toast('info', '正文里过了 ' + n + ' 天，社长室的日子跟上了：今天是第 ' + (before + n) + ' 天（' + mdText(before + n) + '）');
+    rollToasts(rs);
+    if (rs.some(function (r) { return r.payroll; }) && !readState().scene) {
+      var st = readState();
+      await save(function (s) { s.scene = { kind: 'payask', name: '周阿姨', where: '', text: payAskScene(st), at: Date.now(), got: false }; });
+      applyScene();
+    }
+    try { render(); } catch (e) {}
+  }
+  // 25 号正文那一场：周阿姨来找社长签字（社长不在公司就打电话）
+  function payAskScene(st) {
+    var bill = payrollBill(st.roster, st.payroll.day);
+    return '【社长室·工资单】今天' + mdText(st.payroll.day) + '，发工资的日子。周阿姨拿着这个月的工资单来找社长签字：社长在事务所，她就当面把单子拍在桌上、钢笔帽拧开；社长不在，她就打电话过去，在电话那头一项一项念。' +
+      '工资单上一共 ' + moneyText(-bill.total) + '，账上现在 ' + moneyText(st.money) + '。签字在社长室的工资单上签，这一段写到她把单子递过来、等社长签就停。';
   }
   // 小鸮清账那条：接受或赴约 = 这几条鸽子算清了
   function resolveOwl(s, v) { resolveOwlIn(s, v); }
@@ -5184,6 +5497,14 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     if (!v0) return;
     await save(function (s) { markInvite(s, id, status); });
     render();
+  }
+  // 25 号发工资那一场（社长签完字自动挂上，正文演周阿姨挨个发钱）
+  function paydayScene(bill, sign, st) {
+    var parts = bill.items.map(function (it) { return (LEDGER_KIND[it.kind] || it.kind) + ' ' + moneyText(-it.amount) + '（' + String(it.note || '').replace(/[。]$/, '') + '）'; });
+    var lines = ['【社长室·发工资】' + bill.month + '月' + PAY_DAY + '号，社长刚在工资单上签了字（签名：「' + sign + '」）。周阿姨拿着签好的工资单在事务所里发钱：念到谁，谁过来领，各人照自己这阵子惦记的事有反应；轮不到的一句带过。社长要是不在公司，她就在电话里一个一个念给社长听。' + (agencyName(st) ? '事务所叫「' + agencyName(st) + '」。' : ''),
+      '工资单：' + parts.join('；') + '。一共 ' + moneyText(-bill.total) + '。',
+      '发完账上还剩 ' + moneyText(st.money) + '。' + (st.money < 0 ? '账上是负数：周阿姨那句「再不录黄油就要卖人了」就留在这时候说。' : '')];
+    return lines.join('\n');
   }
   function dateScene(v, st) {
     var lines = ['【社长室·邀约】' + mdText(v.day) + '（第 ' + v.day + ' 天）。' + v.what + '。地点：' + v.where + '。社长现在就去赴约，这一段正文写这场见面，' + v.by + (v.vs ? '和' + v.vs : '') + '当主角。' + (agencyName(st) ? '社长的事务所叫「' + agencyName(st) + '」。' : ''),
@@ -5202,10 +5523,12 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
       var hs = wealthHeldSum(st);
       lines.push('事务所账上现在是 ' + moneyText(st.money) + (hs ? '，手上已经压着 ' + moneyText(hs) + ' 的理财' : '') + '。社长真要买，在社长室的账本里买。');
     }
-    var r = v.talentId ? st.roster.find(function (x) { return x.id === v.talentId; }) : null;
-    if (v.kind === 'talent' && r) lines = lines.concat(['她是旗下艺人「' + (r.stageName || '') + '」，本名' + r.realName + '。']).concat(personBlock(r));
+    var r = v.talentId ? (st.roster.find(function (x) { return x.id === v.talentId; }) || (st.met || []).find(function (x) { return x.id === v.talentId; })) : null;
+    if (v.kind === 'talent' && r) lines = lines.concat([r.stageName ? '她是旗下艺人「' + r.stageName + '」，本名' + r.realName + '。' : '她是来面试过、进社长室聊过的' + r.realName + '，还没签约。']).concat(personBlock(r));
     else {
       if (L.staff && L.staff[v.by]) lines.push('关于' + v.by + '：' + L.staff[v.by]);
+      if (L.visitors && L.visitors[v.by]) lines.push('关于' + v.by + '：' + L.visitors[v.by]);
+      if (v.visitor) lines.push('这件事把一道选择题摆到社长面前：接不接、给不给、留不留，写到题摆好就停，由社长定。');
       if (v.vs && L.staff && L.staff[v.vs]) lines.push('关于' + v.vs + '：' + L.staff[v.vs]);
       if (r) lines.push('这件事提到的旗下艺人「' + r.stageName + '」：本名' + r.realName + '，' + r.age + ' 岁，' + (r.voice && r.voice.label) + '，接受尺度 ' + r.tier + '。');
     }
@@ -5459,6 +5782,13 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     '#shacho-panel .sh-online{font-size:12.5px;color:var(--sh-faint);margin-top:4px;}',
     /* 账本 */
     '#shacho-panel .sh-bal{display:flex;align-items:baseline;gap:10px;margin:6px 0 8px;}',
+    '#shacho-panel .sh-pay{width:100%;border-collapse:collapse;margin:8px 0;font-size:14px;}',
+    '#shacho-panel .sh-pay td{padding:5px 2px;border-bottom:1px solid var(--sh-line);vertical-align:top;}',
+    '#shacho-panel .sh-pay td.amt{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--sh-accent);}',
+    '#shacho-panel .sh-pay tr.nt td{border-bottom:0;padding-top:0;font-size:12px;color:var(--sh-faint);}',
+    '#shacho-panel .sh-pay tr.tot td{font-weight:800;font-size:16px;border-bottom:0;padding-top:9px;}',
+    '#shacho-panel .sh-payroll .warn{color:var(--sh-accent);font-weight:700;}',
+    '#shacho-panel input.sh-sign{font-family:"Ma Shan Zheng","STXingkai","华文行楷","Kaiti SC","KaiTi",cursive;font-size:26px;text-align:center;border:0;border-bottom:2px solid var(--sh-ink);background:transparent;width:100%;padding:6px 0;}',
     '#shacho-panel .sh-bal span{font-size:13px;color:var(--sh-faint);}',
     '#shacho-panel .sh-bal b{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;}',
     '#shacho-panel .sh-bal.neg b{color:#c62828;}',
@@ -6129,19 +6459,37 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     if (got) toast('warning', (L.banker ? L.banker.name + '：' : '') + wealthLine('redeem'));
   }
 
+  // ── 25 号工资单（10-20 Fan：签字、扣一大笔，一定要过这一关；前期是难度，后期是仪式）──
+  function renderPayroll(st, m) {
+    if (!payrollDue(st)) return '';
+    var bill = payrollBill(st.roster, st.payroll.day);
+    var out = -bill.total, after = st.money - out;
+    var rows = bill.items.map(function (it) {
+      return '<tr><td>' + esc(LEDGER_KIND[it.kind] || it.kind) + '</td><td class="amt">' + esc(moneyText(it.amount)) + '</td></tr>' +
+        (it.note ? '<tr class="nt"><td colspan="2">' + esc(it.note) + '</td></tr>' : '');
+    }).join('');
+    return '<div class="sh-modal"><div class="sh-dialog wide sh-payroll"><h3>' + st.payroll.month + ' 月工资单' + (agencyName(st) ? '<small>' + esc(agencyName(st)) + '</small>' : '') + '</h3>' +
+      '<p>周阿姨把工资单拍在桌上，钢笔帽已经拧开了：「社长，签字。签了我才发得出去。」</p>' +
+      '<table class="sh-pay">' + rows + '<tr class="tot"><td>一共</td><td class="amt">' + esc(moneyText(-out)) + '</td></tr></table>' +
+      '<div class="sh-bal' + (after < 0 ? ' neg' : '') + '"><span>账上 ' + esc(moneyText(st.money)) + ' → 发完</span><b>' + esc(moneyText(after)) + '</b></div>' +
+      (after < 0 ? '<p class="warn">发完是负数。周阿姨：「' + esc(noteOf('broke')) + '」</p>' : '') +
+      '<input id="sh-payroll-sign" class="sh-sign" maxlength="16" placeholder="社长签字" autocomplete="off">' +
+      '<div class="err">' + esc(m.err || '') + '</div>' +
+      '<div class="row"><button class="sh-btn" data-act="modal-cancel">再待一会儿</button><button class="sh-btn pri" data-act="payroll-sign">签字，发工资</button></div></div></div>';
+  }
   // ── 账本（含贷款）──
   var LEDGER_KIND = { start: '开张', rent: '房租', utilities: '水电', sElectric: 'S. 电费', staff: '员工', talent: '艺人', sign: '签约', session: '棚费', payout: '作品', gig: '龙套', loan: '贷款', loanPay: '还贷', loanOff: '还清', overdue: '罚息', wealthBuy: '理财', wealthEnd: '理财', wealthRedeem: '赎回', online: '联机', onlineBuy: '听作品' };
   function renderLedger(st) {
-    var d = dateOf(st.day), endDay = dayOfDate(new Date(d.getFullYear(), d.getMonth() + 1, 0));
-    var bill = monthlyBill(st.roster, endDay), lb = st.loan ? loanBill(st.loan) : null;
+    var rd = nextDom(st.day, RENT_DAY), pd = nextDom(st.day, PAY_DAY);
+    var rent = rentBill(rd), pay = payrollBill(st.roster, pd), lb = st.loan ? loanBill(st.loan) : null;
     var h = '<div class="sh-modal"><div class="sh-dialog wide"><h3>账本' + (agencyName(st) ? '<small>' + esc(agencyName(st)) + '</small>' : '') + '</h3>' +
       '<div class="sh-bal' + (st.money < 0 ? ' neg' : '') + '"><span>账上</span><b>' + esc(moneyText(st.money)) + '</b></div>' +
-      '<p>周阿姨：' + esc(mdText(endDay)) + ' 月底结账，房租、水电、工资大概 ' + esc(moneyText(-bill.total)) + (lb ? '，还贷 ' + esc(moneyText(lb.principal + lb.interest)) : '') + '。' + (st.money < 0 ? esc(noteOf('broke')) : '') + '</p>';
+      '<p>周阿姨：' + esc(mdText(rd)) + ' 交房租水电 ' + esc(moneyText(-rent.total)) + (lb ? '，还贷 ' + esc(moneyText(lb.principal + lb.interest)) : '') + '；' + esc(mdText(pd)) + ' 发工资，大概 ' + esc(moneyText(-pay.total)) + '，得你签字。' + (st.money < 0 ? esc(noteOf('broke')) : '') + '</p>';
     if (st.money < 0 || st.loan) {
       var B = L.banker || {};
       h += '<div class="sh-loan"><div class="sh-label">贷款 · ' + esc(B.name || '银行') + (B.title ? '（' + esc(B.title) + '）' : '') + '</div>';
       if (st.loan) {
-        h += '<p>还剩 <b>' + esc(moneyText(st.loan.left)) + '</b>，第 ' + (st.loan.paid + 1) + '/' + st.loan.months + ' 期，月息 ' + esc(pct(st.loan.rate)) + '；月底自动扣 ' + esc(moneyText(lb.principal + lb.interest)) + '。</p>' +
+        h += '<p>还剩 <b>' + esc(moneyText(st.loan.left)) + '</b>，第 ' + (st.loan.paid + 1) + '/' + st.loan.months + ' 期，月息 ' + esc(pct(st.loan.rate)) + '；每月 ' + RENT_DAY + ' 号自动扣 ' + esc(moneyText(lb.principal + lb.interest)) + '。</p>' +
           '<button class="sh-btn" data-act="loan-off"' + (st.money < st.loan.left ? ' disabled' : '') + '>提前还清 ' + esc(moneyText(st.loan.left)) + '</button>';
       } else {
         h += '<div class="sh-chips">' + (E.loans || []).map(function (o, i) {
@@ -6223,6 +6571,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
         '<div class="row"><button class="sh-btn" data-act="modal-cancel">再想想</button><button class="sh-btn pri" data-act="sign-ok" data-id="' + esc(c.id) + '">签约</button></div></div></div>';
     }
     if (m.kind === 'settings') return renderSettings();
+    if (m.kind === 'payroll' || (m.kind === 'endday' && payrollDue(st))) return renderPayroll(st, m);
     if (m.kind === 'endday') {
       var left = st.invites.filter(function (v) { return v.status === 'pending' && v.day <= st.day; }).length;
       return '<div class="sh-modal"><div class="sh-dialog"><h3>结束第 ' + st.day + ' 天？</h3>' +
@@ -6788,6 +7137,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
 
   function openPanel() {
     if (!CUR) { var a = readState().audition; if (a && a.cands) { CUR = a; CUR.cands.forEach(function (c) { if (c.status === 'loading') { c.status = 'error'; c.err = '上次没生成完'; } }); } }
+    if (payrollDue(readState()) && !UI.modal) UI.modal = { kind: 'payroll' };   // 25 号的工资单没签：一进门周阿姨就拍在桌上
     PANEL.classList.add('open'); FAB.classList.add('open'); render();
     // 市场排行榜的种子：每个聊天定一次，NPC 事务所的漂动就固定下来
     if (!readState().seed) save(function (s) { if (!s.seed) s.seed = (rndU32() % 2147483646) + 1; });
@@ -6896,6 +7246,11 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
     else if (act === 'cal-next') { UI.calOff++; render(); }
     else if (act === 'endday') { UI.modal = { kind: 'endday' }; render(); }
     else if (act === 'endday-ok') endDay();
+    else if (act === 'payroll-sign') {
+      var sgIn = PANEL.querySelector('#sh-payroll-sign'), sg = sgIn ? String(sgIn.value || '').trim() : '';
+      if (!sg) { UI.modal = { kind: 'payroll', err: '周阿姨：签字。签了我才发得出去。' }; render(); var si = PANEL.querySelector('#sh-payroll-sign'); if (si) si.focus(); }
+      else signPayroll(sg);
+    }
     else if (act === 'inv-accept') setInvStatus(id, 'accepted');
     else if (act === 'inv-ignore') setInvStatus(id, 'ignored');
     else if (act === 'inv-go') goInvite(id);
