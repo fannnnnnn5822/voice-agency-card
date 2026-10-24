@@ -8736,7 +8736,8 @@ var SHACHO_DD = (function () {
         r = await fetch(tpl.replace('{version}', top), { cache: 'no-cache' });
       }
       if (!r.ok) throw new Error('下载带卡面的卡失败（HTTP ' + r.status + '）');
-      var res = await importRawCharacter(c.name, await r.blob());
+      // 按头像文件名导（声色片场1.png 这种重名卡）：按卡名导会写进「卡名.png」，新建出一张同名卡，玩家的聊天还挂在旧的那张上
+      var res = await importRawCharacter(c.avatar, await r.blob());
       if (res && res.ok === false) throw new Error('酒馆没收下（HTTP ' + res.status + '）');
       toast('success', '头像找回来了。没看到的话刷新一下页面');
     } catch (e) { toast('error', '头像没找回来：' + ((e && e.message) || e) + '。可以去发布页下载 card.png 手动导一次'); }
