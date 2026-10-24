@@ -8737,9 +8737,12 @@ var SHACHO_DD = (function () {
       }
       if (!r.ok) throw new Error('下载带卡面的卡失败（HTTP ' + r.status + '）');
       // 按头像文件名导（声色片场1.png 这种重名卡）：按卡名导会写进「卡名.png」，新建出一张同名卡，玩家的聊天还挂在旧的那张上
-      var res = await importRawCharacter(c.avatar, await r.blob());
+      // 酒馆助手 4.11.3：卡名1.png 这种卡，文件已经写好，它回头按「卡名1」找卡找不到才抛「角色卡 '…' 不存在」——卡其实已经换好了，只是界面没刷新
+      var res = null;
+      try { res = await importRawCharacter(c.avatar, await r.blob()); }
+      catch (e2) { if (!/不存在/.test(String((e2 && e2.message) || e2))) throw e2; }
       if (res && res.ok === false) throw new Error('酒馆没收下（HTTP ' + res.status + '）');
-      toast('success', '头像找回来了。没看到的话刷新一下页面');
+      toast('success', '头像找回来了，刷新一下页面就能看到');
     } catch (e) { toast('error', '头像没找回来：' + ((e && e.message) || e) + '。可以去发布页下载 card.png 手动导一次'); }
     finally { AV.busy = false; }
   }
