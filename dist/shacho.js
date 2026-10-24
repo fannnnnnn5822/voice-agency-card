@@ -8678,8 +8678,74 @@ var SHACHO_DD = (function () {
   }
   try { window.addEventListener('pagehide', cleanup); } catch (e) {}
 
+  // ═════════════ 头像找回（10-24，照声色片场 v0.1.18–0.1.19）═════════════
+  // 整卡更新器拉 JSON 时，上游要把卡包进玩家现在的头像；拿不到头像就塞一个 1×1 的半透明蓝点（玩家看到的蓝圈），
+  // 导 JSON 的老路则是酒馆默认图 /img/ai4.png（酒馆用 Jimp 重新编码过：字节不一样，像素一样）。
+  // 认法：头像只有 1×1，或者和 ai4.png 尺寸、像素都一样 = 丢了。玩家自己换过的头像不一样，不打扰。
+  // 找回：弹一条，点了拉带卡面的 card.png 再导一次（聊天记录不动）。0.1.18 以前的版本没发 PNG：那一版拉不到就按更新日志顶上的版本拉
+  var AV = { checked: '', busy: false };
+  async function avPixels(buf) {
+    var bmp = await createImageBitmap(new Blob([buf], { type: 'image/png' }));
+    var cv = DOC.createElement('canvas'); cv.width = 32; cv.height = 48;
+    var g = cv.getContext('2d'); g.drawImage(bmp, 0, 0, 32, 48);
+    var out = { w: bmp.width, h: bmp.height, d: g.getImageData(0, 0, 32, 48).data };
+    try { bmp.close(); } catch (e) {}
+    return out;
+  }
+  function avSame(a, b) {
+    if (!a || !b || a.w !== b.w || a.h !== b.h) return false;
+    var sum = 0; for (var i = 0; i < a.d.length; i++) sum += Math.abs(a.d[i] - b.d[i]);
+    return sum / a.d.length < 3;
+  }
+  function avChar() {
+    try {
+      var X = typeof SillyTavern !== 'undefined' ? SillyTavern : null, ch = X && X.characters && X.characters[X.characterId];
+      if (!ch || !ch.avatar || !ch.data) return null;
+      var scs = (((ch.data.extensions || {}).tavern_helper || {}).scripts) || [];
+      var up = scs.filter(function (x) { return x && x.name === '自动更新角色卡'; })[0];
+      if (!up || !scs.some(function (x) { return x && /SHACHO_CORE|shacho_script_ref/.test(String(x.content || '')); })) return null;   // 只管在线版的社长室
+      var d = up.data || {};
+      return { name: ch.name, avatar: ch.avatar, ver: String(ch.data.character_version || '').trim(), link: String(d['角色卡链接'] || ''), log: String(d['更新日志链接'] || '') };
+    } catch (e) { return null; }
+  }
+  async function checkAvatar() {
+    var c = avChar(); if (!c || !/\{version\}/.test(c.link) || AV.checked === c.avatar) return;
+    AV.checked = c.avatar;
+    try {
+      var base = VIEW.location && VIEW.location.origin ? VIEW.location.origin : '';
+      var pm = await avPixels(await (await fetch(base + '/characters/' + encodeURIComponent(c.avatar), { cache: 'no-cache' })).arrayBuffer());
+      if (!(pm.w <= 4 && pm.h <= 4) && !avSame(pm, await avPixels(await (await fetch(base + '/img/ai4.png', { cache: 'force-cache' })).arrayBuffer()))) return;
+    } catch (e) { return; }
+    try {
+      if (typeof toastr === 'undefined') return;
+      toastr.warning('上次「更新角色卡」把这张卡的头像弄丢了（换成了蓝圈或酒馆的默认图）。点这条找回：拉带卡面的卡再导一次，聊天记录不动。', '社长室 · 头像', {
+        timeOut: 0, extendedTimeOut: 0, closeButton: true, tapToDismiss: true,
+        onclick: function () { fixAvatar(c); },
+      });
+    } catch (e) {}
+  }
+  async function fixAvatar(c) {
+    if (AV.busy) return; AV.busy = true;
+    try {
+      if (typeof importRawCharacter !== 'function') { toast('warning', '酒馆助手版本太旧，没有导入角色卡的接口：去发布页下载 card.png 手动导一次'); return; }
+      var tpl = c.link.replace(/card\.json$/, 'card.png');
+      var r = /^\d+\.\d+\.\d+$/.test(c.ver) ? await fetch(tpl.replace('{version}', c.ver), { cache: 'no-cache' }) : null;
+      if (!r || !r.ok) {   // 这一版还没发 PNG：按更新日志顶上的版本拉
+        var top = ((await (await fetch(c.log, { cache: 'no-cache' })).text()).match(/^##\s*(\d+\.\d+\.\d+)\s*$/m) || [])[1];
+        if (!top) throw new Error('读不到更新日志里的版本号');
+        r = await fetch(tpl.replace('{version}', top), { cache: 'no-cache' });
+      }
+      if (!r.ok) throw new Error('下载带卡面的卡失败（HTTP ' + r.status + '）');
+      var res = await importRawCharacter(c.name, await r.blob());
+      if (res && res.ok === false) throw new Error('酒馆没收下（HTTP ' + res.status + '）');
+      toast('success', '头像找回来了。没看到的话刷新一下页面');
+    } catch (e) { toast('error', '头像没找回来：' + ((e && e.message) || e) + '。可以去发布页下载 card.png 手动导一次'); }
+    finally { AV.busy = false; }
+  }
+  setTimeout(checkAvatar, 2500);
+
   // 测试/调试钩子（无副作用）
-  try { window.__shacho = { open: openPanel, close: closePanel, panel: PANEL, fab: FAB, state: readState, cur: function () { return CUR; }, ui: UI, core: CORE, ttsPlan: ttsPlan, stop: stopAudio, render: render,
+  try { window.__shacho = { checkAvatar: checkAvatar, fixAvatar: fixAvatar, avChar: avChar, open: openPanel, close: closePanel, panel: PANEL, fab: FAB, state: readState, cur: function () { return CUR; }, ui: UI, core: CORE, ttsPlan: ttsPlan, stop: stopAudio, render: render,
     speak: speakItem, applyRecent: applyRecent, syncTalents: syncTalents, logNews: logNews, tb: TB, mmText: mmText, mmVoiceOf: mmVoiceOf, baseSpeed: baseSpeed, backend: ttsBackend, ev: EVLOG, sfx: SFX, playSample: playSample, aud: AUD,
     sSend: sSend, sClear: sClear, inputLock: applyInputLock, genRaw: genRaw, llmApi: llmApi, llmTest: llmTest, exp: EXP, downloadWork: downloadWork, renderWorkAudio: renderWorkAudio, scriptTxt: scriptTxt, exportName: exportName, sessWork: sessWork, wavBlob: wavBlob }; } catch (e) {}
 })();
