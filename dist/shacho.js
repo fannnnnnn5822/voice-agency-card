@@ -1782,7 +1782,7 @@ try { if (typeof globalThis !== 'undefined') globalThis.SHACHO_LISTS = SHACHO_LI
       var n = Number(dist[s]) || 0, pc = tot ? Math.round(n / tot * 100) : 0; return '<div><span>' + s + '★</span><i><b style="width:' + pc + '%"></b></i><em>' + n + '</em></div>'; }).join('') + '</div>';
     if (hasBought(st, id)) {
       var rt = M.ui.rate[id] || {};
-      if (M.ui.toRate === id) { M.ui.toRate = 0; setTimeout(function () { var el = q('#mk-cm-' + id), box = el && el.closest('.mk-rate'); if (box && box.scrollIntoView) box.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 60); }
+      if (M.ui.toRate === id) { M.ui.toRate = 0; setTimeout(function () { var P = panelEl(), el = P && P.querySelector('#mk-cm-' + id), box = el && el.closest('.mk-rate'); if (box && box.scrollIntoView) box.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 60); }
       h += '<div class="mk-rate"><div class="mk-rstars">' + [1, 2, 3, 4, 5].map(function (s) { return '<button class="mk-s' + (s <= (rt.stars || 0) ? ' on' : '') + '" data-act="mk-star" data-id="' + id + '" data-v="' + s + '" aria-label="' + s + ' 星">★</button>'; }).join('') + '</div>' +
         '<input class="mk-cm" id="mk-cm-' + id + '" maxlength="' + MK.commentMax + '" placeholder="一句评价（可不写，' + MK.commentMax + ' 字以内）" value="' + esc(rt.comment || '') + '">' +
         '<button class="sh-btn sm pri" data-act="mk-rate" data-id="' + id + '"' + (rt.busy ? ' disabled' : '') + '>' + (rt.done ? '改评价' : '交评价') + '</button>' + (rt.err ? '<div class="mk-errt">' + esc(rt.err) + '</div>' : '') + (rt.done ? '<div class="mk-ok">交上了。</div>' : '') + '</div>';
